@@ -29,8 +29,17 @@ export class GroupsService {
   async create(ownerId: string, dto: CreateGroupDto) {
     return this.prisma.$transaction(async (tx) => {
       const owner = await tx.user.findUniqueOrThrow({ where: { id: ownerId } });
+      const { competition, ...groupData } = dto;
       const group = await tx.group.create({
-        data: { ...dto, ownerId, inviteToken: generateInviteToken() },
+        data: {
+          ...groupData,
+          ownerId,
+          inviteToken: generateInviteToken(),
+          sport: competition?.sport ?? 'FOOTBALL',
+          competitionLeagueId: competition?.leagueId ?? null,
+          competitionSeason: competition?.season ?? null,
+          competitionName: competition?.name ?? null,
+        },
       });
       await this.participantsService.createWithUniqueCode(tx, {
         groupId: group.id,
@@ -81,6 +90,10 @@ export class GroupsService {
       scoringExactScore: group.scoringExactScore,
       scoringCorrectOutcome: group.scoringCorrectOutcome,
       scoringOneTeamScore: group.scoringOneTeamScore,
+      sport: group.sport,
+      competitionLeagueId: group.competitionLeagueId,
+      competitionSeason: group.competitionSeason,
+      competitionName: group.competitionName,
       participantCount: group._count.participants,
       isOwner: user.role === 'owner' && group.ownerId === user.sub,
     };

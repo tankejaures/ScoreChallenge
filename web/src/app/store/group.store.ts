@@ -44,6 +44,14 @@ export const GroupStore = signalStore(
         patchState(store, { loading: false, error: 'Impossible de charger les matchs' });
       }
     },
+    async refreshMatches(groupId: string): Promise<void> {
+      try {
+        const matches = await firstValueFrom(api.listMatches(groupId));
+        patchState(store, { matches });
+      } catch {
+        // rafraîchissement silencieux : on garde les données affichées
+      }
+    },
     async loadRanking(groupId: string): Promise<void> {
       const ranking = await firstValueFrom(api.ranking(groupId));
       patchState(store, { ranking });

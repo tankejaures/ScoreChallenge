@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
@@ -6,6 +6,8 @@ import { MatchCardComponent } from '../../shared/match-card.component';
 import { PredictionDialogComponent } from './prediction-dialog.component';
 import { GroupStore } from '../../store/group.store';
 import { MatchView } from '../../core/models';
+
+const LIVE_REFRESH_INTERVAL_MS = 60_000;
 
 function canPredict(match: MatchView): boolean {
   if (match.status !== 'UPCOMING') {
@@ -61,16 +63,18 @@ function canPredict(match: MatchView): boolean {
     </div>
   `,
 })
-export class MatchesPageComponent implements OnInit {
+export class MatchesPageComponent implements OnInit, OnDestroy {
   readonly store = inject(GroupStore);
   private readonly route = inject(ActivatedRoute);
   private readonly messageService = inject(MessageService);
 
   readonly selectedMatch = signal<MatchView | null>(null);
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly upcoming = computed(() => this.store.matches().filter((m) => m.status === 'UPCOMING'));
   readonly live = computed(() => this.store.matches().filter((m) => m.status === 'LIVE'));
   readonly finished = computed(() => this.store.matches().filter((m) => m.status === 'FINISHED'));
+  readonly hasLiveMatch = computed(() => this.live().length > 0);
 
   protected get groupId(): string {
     return this.route.parent?.snapshot.paramMap.get('id') ?? '';
@@ -78,6 +82,17 @@ export class MatchesPageComponent implements OnInit {
 
   ngOnInit(): void {
     void this.store.loadMatches(this.groupId);
+    this.refreshTimer = setInterval(() => {
+      if (document.visibilityState === 'visible' && this.hasLiveMatch()) {
+        void this.store.refreshMatches(this.groupId);
+      }
+    }, LIVE_REFRESH_INTERVAL_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshTimer !== null) {
+      clearInterval(this.refreshTimer);
+    }
   }
 
   isPredictable(match: MatchView): boolean {

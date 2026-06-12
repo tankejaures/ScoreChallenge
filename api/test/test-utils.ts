@@ -20,6 +20,7 @@ export async function resetDb(app: INestApplication): Promise<void> {
   await prisma.$transaction([
     prisma.prediction.deleteMany(),
     prisma.match.deleteMany(),
+    prisma.fixture.deleteMany(),
     prisma.participant.deleteMany(),
     prisma.passwordResetToken.deleteMany(),
     prisma.group.deleteMany(),

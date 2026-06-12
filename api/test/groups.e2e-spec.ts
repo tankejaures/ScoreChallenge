@@ -102,4 +102,57 @@ describe('Groups (e2e)', () => {
   it('rejects unauthenticated access', async () => {
     await request(app.getHttpServer()).get('/groups').expect(401);
   });
+
+  it('creates a group linked to a competition', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/groups')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'CdM entre potes',
+        competition: {
+          sport: 'BASKETBALL',
+          leagueId: 12,
+          season: '2025-2026',
+          name: 'NBA',
+        },
+      })
+      .expect(201);
+    const body = res.body as {
+      sport: string;
+      competitionLeagueId: number;
+      competitionSeason: string;
+      competitionName: string;
+    };
+    expect(body.sport).toBe('BASKETBALL');
+    expect(body.competitionLeagueId).toBe(12);
+    expect(body.competitionSeason).toBe('2025-2026');
+    expect(body.competitionName).toBe('NBA');
+  });
+
+  it('exposes competition info in the summary', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/groups')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'CdM entre potes',
+        competition: {
+          sport: 'BASKETBALL',
+          leagueId: 12,
+          season: '2025-2026',
+          name: 'NBA',
+        },
+      })
+      .expect(201);
+    const groupId = (created.body as { id: string }).id;
+    const res = await request(app.getHttpServer())
+      .get(`/groups/${groupId}/summary`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const summary = res.body as {
+      sport: string;
+      competitionLeagueId: number | null;
+    };
+    expect(summary.sport).toBe('BASKETBALL');
+    expect(summary.competitionLeagueId).toBe(12);
+  });
 });

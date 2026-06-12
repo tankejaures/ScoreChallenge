@@ -33,16 +33,40 @@ const STATUS_LABEL: Record<MatchStatus, { label: string; severity: 'info' | 'war
       </div>
 
       <div class="flex items-center justify-center gap-3 text-lg">
-        <span class="flex-1 text-right sc-display">{{ match().teamA }}</span>
+        <span class="flex-1 text-right sc-display flex items-center justify-end gap-2">
+          {{ match().teamA }}
+          @if (match().fixture?.teamALogo) {
+            <img [src]="match().fixture!.teamALogo" alt="" class="h-6 w-6" />
+          }
+        </span>
         @if (match().status === 'FINISHED') {
           <span class="sc-score text-3xl" data-testid="final-score">
             {{ match().finalScoreA }} – {{ match().finalScoreB }}
           </span>
+        } @else if (liveScore(); as live) {
+          <span class="sc-score text-3xl" data-testid="live-score">
+            {{ live.scoreA }} – {{ live.scoreB }}
+          </span>
         } @else {
           <span class="sc-muted text-sm uppercase tracking-widest">vs</span>
         }
-        <span class="flex-1 sc-display">{{ match().teamB }}</span>
+        <span class="flex-1 sc-display flex items-center gap-2">
+          @if (match().fixture?.teamBLogo) {
+            <img [src]="match().fixture!.teamBLogo" alt="" class="h-6 w-6" />
+          }
+          {{ match().teamB }}
+        </span>
       </div>
+
+      @if (liveMinute(); as minute) {
+        <p
+          class="text-center text-xs"
+          style="color: var(--sc-volt-400)"
+          data-testid="live-minute"
+        >
+          ⏱ {{ minute }}′
+        </p>
+      }
 
       @if (match().myPrediction; as prediction) {
         <div class="text-center text-sm sc-muted" data-testid="my-prediction">
@@ -114,7 +138,36 @@ export class MatchCardComponent {
     { initialValue: Date.now() },
   );
 
-  readonly statusInfo = computed(() => STATUS_LABEL[this.match().status]);
+  readonly statusInfo = computed(() => {
+    const fixtureStatus = this.match().fixture?.status;
+    if (fixtureStatus === 'POSTPONED') {
+      return { label: 'Reporté', severity: 'warn' as const };
+    }
+    if (fixtureStatus === 'CANCELLED') {
+      return { label: 'Annulé', severity: 'warn' as const };
+    }
+    return STATUS_LABEL[this.match().status];
+  });
+
+  readonly liveScore = computed(() => {
+    const fixture = this.match().fixture;
+    if (
+      this.match().status === 'LIVE' &&
+      fixture?.status === 'LIVE' &&
+      fixture.scoreA !== null &&
+      fixture.scoreB !== null
+    ) {
+      return { scoreA: fixture.scoreA, scoreB: fixture.scoreB };
+    }
+    return null;
+  });
+
+  readonly liveMinute = computed(() => {
+    const fixture = this.match().fixture;
+    return this.match().status === 'LIVE' && fixture?.status === 'LIVE'
+      ? fixture.minute
+      : null;
+  });
   readonly countdown = computed(() => {
     this.tick();
     if (this.match().status !== 'UPCOMING') {

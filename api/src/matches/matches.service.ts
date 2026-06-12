@@ -7,8 +7,9 @@ import { Match } from '@prisma/client';
 import type { JwtPayload } from '../auth/jwt-payload.interface';
 import { PredictionsService } from '../predictions/predictions.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ScoringService } from '../predictions/scoring.service';
 import { CreateMatchDto } from './dto/create-match.dto';
+import { ImportFixturesDto } from './dto/import-fixtures.dto';
+import { MatchSettlementService } from './match-settlement.service';
 import { SetResultDto } from './dto/set-result.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 import { getMatchStatus, MatchStatus } from './match-status.util';
@@ -17,11 +18,19 @@ import { getMatchStatus, MatchStatus } from './match-status.util';
 export class MatchesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly scoringService: ScoringService,
+    private readonly settlementService: MatchSettlementService,
     private readonly predictionsService: PredictionsService,
   ) {}
 
   async create(groupId: string, dto: CreateMatchDto) {
+    const group = await this.prisma.group.findUniqueOrThrow({
+      where: { id: groupId },
+    });
+    if (group.competitionLeagueId !== null) {
+      throw new BadRequestException(
+        'Ce groupe est lié à une compétition : importez les matchs officiels',
+      );
+    }
     this.assertDeadlineBeforeKickoff(dto.predictionDeadline, dto.kickoffAt);
     const match = await this.prisma.match.create({
       data: {
@@ -54,39 +63,67 @@ export class MatchesService {
   }
 
   async setResult(groupId: string, matchId: string, dto: SetResultDto) {
-    const existing = await this.prisma.match.findUnique({
-      where: { id: matchId },
-      include: { group: true },
-    });
-    if (!existing || existing.groupId !== groupId) {
-      throw new NotFoundException('Match introuvable');
+    const match = await this.findInGroup(groupId, matchId);
+    if (match.fixtureId !== null) {
+      throw new BadRequestException(
+        'Score géré automatiquement pour les matchs officiels',
+      );
     }
-    const config = {
-      exactScore: existing.group.scoringExactScore,
-      correctOutcome: existing.group.scoringCorrectOutcome,
-      oneTeamScore: existing.group.scoringOneTeamScore,
-    };
-
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const match = await tx.match.update({
-        where: { id: matchId },
-        data: { finalScoreA: dto.scoreA, finalScoreB: dto.scoreB },
-      });
-      const predictions = await tx.prediction.findMany({ where: { matchId } });
-      for (const prediction of predictions) {
-        const points = this.scoringService.computePoints(
-          { a: prediction.scoreA, b: prediction.scoreB },
-          { a: dto.scoreA, b: dto.scoreB },
-          config,
-        );
-        await tx.prediction.update({
-          where: { id: prediction.id },
-          data: { points },
-        });
-      }
-      return match;
-    });
+    const updated = await this.settlementService.settle(
+      matchId,
+      dto.scoreA,
+      dto.scoreB,
+    );
     return this.withStatus(updated);
+  }
+
+  async importFixtures(groupId: string, dto: ImportFixturesDto) {
+    const group = await this.prisma.group.findUniqueOrThrow({
+      where: { id: groupId },
+    });
+    if (group.competitionLeagueId === null) {
+      throw new BadRequestException(
+        'Ce groupe n’est pas lié à une compétition : créez les matchs manuellement',
+      );
+    }
+    const fixtures = await this.prisma.fixture.findMany({
+      where: { id: { in: dto.fixtureIds } },
+    });
+    if (fixtures.length !== dto.fixtureIds.length) {
+      throw new BadRequestException('Certains matchs sont introuvables');
+    }
+    const foreign = fixtures.find(
+      (f) =>
+        f.sport !== group.sport ||
+        f.leagueId !== group.competitionLeagueId ||
+        f.season !== group.competitionSeason,
+    );
+    if (foreign) {
+      throw new BadRequestException(
+        'Certains matchs n’appartiennent pas à la compétition du groupe',
+      );
+    }
+    const existing = await this.prisma.match.findMany({
+      where: { groupId, fixtureId: { in: dto.fixtureIds } },
+      select: { fixtureId: true },
+    });
+    const alreadyImported = new Set(existing.map((m) => m.fixtureId));
+    const toCreate = fixtures.filter((f) => !alreadyImported.has(f.id));
+    const created = await this.prisma.$transaction(
+      toCreate.map((fixture) =>
+        this.prisma.match.create({
+          data: {
+            groupId,
+            fixtureId: fixture.id,
+            teamA: fixture.teamA,
+            teamB: fixture.teamB,
+            kickoffAt: fixture.kickoffAt,
+            predictionDeadline: fixture.kickoffAt,
+          },
+        }),
+      ),
+    );
+    return created.map((match) => this.withStatus(match));
   }
 
   async listForGroup(groupId: string, user: JwtPayload) {
@@ -95,6 +132,17 @@ export class MatchesService {
       where: { groupId },
       orderBy: { kickoffAt: 'asc' },
       include: {
+        fixture: {
+          select: {
+            status: true,
+            minute: true,
+            scoreA: true,
+            scoreB: true,
+            teamALogo: true,
+            teamBLogo: true,
+            round: true,
+          },
+        },
         predictions: {
           include: { participant: { select: { id: true, name: true } } },
         },

@@ -14,6 +14,10 @@ const fakeGroup = (id: string, name: string): Group => ({
   scoringExactScore: 5,
   scoringCorrectOutcome: 3,
   scoringOneTeamScore: 1,
+  sport: 'FOOTBALL',
+  competitionLeagueId: null,
+  competitionSeason: null,
+  competitionName: null,
   createdAt: new Date().toISOString(),
 });
 
