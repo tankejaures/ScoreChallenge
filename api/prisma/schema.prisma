@@ -38,6 +38,9 @@ model Group {
   scoringExactScore     Int           @default(5)
   scoringCorrectOutcome Int           @default(3)
   scoringOneTeamScore   Int           @default(1)
+  competitionLeagueId   Int?
+  competitionSeason     Int?
+  competitionName       String?
   createdAt             DateTime      @default(now())
   participants          Participant[]
   matches               Match[]
@@ -65,11 +68,14 @@ model Match {
   teamB              String
   kickoffAt          DateTime
   predictionDeadline DateTime
+  fixtureId          String?
+  fixture            Fixture?     @relation(fields: [fixtureId], references: [id], onDelete: SetNull)
   finalScoreA        Int?
   finalScoreB        Int?
   createdAt          DateTime     @default(now())
   predictions        Prediction[]
 
+  @@unique([groupId, fixtureId])
   @@index([groupId])
 }
 
@@ -88,4 +94,33 @@ model Prediction {
   updatedAt     DateTime    @updatedAt
 
   @@unique([matchId, participantId])
+}
+
+enum FixtureStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+  CANCELLED
+}
+
+model Fixture {
+  id         String        @id @default(cuid())
+  externalId Int           @unique
+  leagueId   Int
+  season     Int
+  round      String?
+  teamA      String
+  teamB      String
+  teamALogo  String?
+  teamBLogo  String?
+  kickoffAt  DateTime
+  status     FixtureStatus @default(SCHEDULED)
+  minute     Int?
+  scoreA     Int?
+  scoreB     Int?
+  updatedAt  DateTime      @updatedAt
+  matches    Match[]
+
+  @@index([leagueId, season])
 }
