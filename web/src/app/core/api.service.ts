@@ -14,6 +14,7 @@ import {
   Participant,
   Prediction,
   RankingEntry,
+  Sport,
 } from './models';
 
 const BASE = '/api';
@@ -24,7 +25,7 @@ export interface CreateGroupPayload {
   scoringExactScore?: number;
   scoringCorrectOutcome?: number;
   scoringOneTeamScore?: number;
-  competition?: { leagueId: number; season: number; name: string };
+  competition?: { sport: Sport; leagueId: number; season: string; name: string };
 }
 
 export interface CreateMatchPayload {
@@ -109,13 +110,13 @@ export class ApiService {
     return this.http.get<MatchView[]>(`${BASE}/groups/${groupId}/matches`);
   }
 
-  // Football
-  footballCompetitions(): Observable<Competition[]> {
-    return this.http.get<Competition[]>(`${BASE}/football/competitions`);
+  // Sports
+  sportCompetitions(sport: Sport): Observable<Competition[]> {
+    return this.http.get<Competition[]>(`${BASE}/sports/${sport}/competitions`);
   }
-  competitionFixtures(leagueId: number, season: number): Observable<FixtureView[]> {
+  competitionFixtures(sport: Sport, leagueId: number, season: string): Observable<FixtureView[]> {
     return this.http.get<FixtureView[]>(
-      `${BASE}/football/competitions/${leagueId}/fixtures?season=${season}`,
+      `${BASE}/sports/${sport}/competitions/${leagueId}/fixtures?season=${encodeURIComponent(season)}`,
     );
   }
   importMatches(groupId: string, fixtureIds: string[]): Observable<MatchView[]> {

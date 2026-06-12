@@ -9,11 +9,12 @@ import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { ApiService } from '../../core/api.service';
-import { Competition } from '../../core/models';
+import { Competition, Sport } from '../../core/models';
 import { FixturePickerComponent } from '../../shared/fixture-picker.component';
+import { SPORT_META, SPORTS } from '../../shared/sport';
 import { AuthStore } from '../../store/auth.store';
-import { FootballStore } from '../../store/football.store';
 import { GroupsStore } from '../../store/groups.store';
+import { SportsStore } from '../../store/sports.store';
 
 @Component({
   selector: 'sc-dashboard',
@@ -63,7 +64,9 @@ import { GroupsStore } from '../../store/groups.store';
         >
           <div class="sc-display text-lg">{{ group.name }}</div>
           @if (group.competitionName) {
-            <div class="text-xs sc-muted">🏆 {{ group.competitionName }}</div>
+            <div class="text-xs sc-muted">
+              {{ sportMeta[group.sport].icon }} {{ group.competitionName }}
+            </div>
           }
           @if (group.description) {
             <div class="text-sm sc-muted">{{ group.description }}</div>
@@ -109,33 +112,54 @@ import { GroupsStore } from '../../store/groups.store';
           </form>
         } @else {
           <div class="flex flex-col gap-3">
-            @if (footballStore.error()) {
-              <p-message severity="warn" [text]="footballStore.error()!" />
-            }
-            <p-select
-              [options]="footballStore.competitions()"
-              optionLabel="name"
-              placeholder="Choisir une compétition"
-              [filter]="true"
-              [ngModel]="selectedCompetition()"
-              (ngModelChange)="onCompetitionChange($event)"
-              name="competition"
-              data-testid="competition-select"
-            >
-              <ng-template #item let-competition>
-                <span class="flex items-center gap-2">
-                  <img [src]="competition.logo" alt="" class="h-4 w-4" />
-                  {{ competition.name }}
-                  <span class="text-xs sc-muted">{{ competition.country }}</span>
-                </span>
-              </ng-template>
-            </p-select>
+            <div class="grid grid-cols-3 gap-2">
+              @for (sport of sports; track sport) {
+                <button
+                  type="button"
+                  class="sc-card p-3 text-center cursor-pointer"
+                  [style.outline]="
+                    selectedSport() === sport ? '2px solid var(--sc-volt-400)' : 'none'
+                  "
+                  (click)="selectSport(sport)"
+                  [attr.data-testid]="'sport-' + sport"
+                >
+                  <div class="text-2xl">{{ sportMeta[sport].icon }}</div>
+                  <div class="text-xs sc-muted">{{ sportMeta[sport].label }}</div>
+                </button>
+              }
+            </div>
 
-            @if (footballStore.loading()) {
+            @if (sportsStore.error()) {
+              <p-message severity="warn" [text]="sportsStore.error()!" />
+            }
+            @if (selectedSport()) {
+              <p-select
+                [options]="sportsStore.competitions()"
+                optionLabel="name"
+                placeholder="Choisir une compétition"
+                [filter]="true"
+                [ngModel]="selectedCompetition()"
+                (ngModelChange)="onCompetitionChange($event)"
+                name="competition"
+                data-testid="competition-select"
+              >
+                <ng-template #item let-competition>
+                  <span class="flex items-center gap-2">
+                    @if (competition.logo) {
+                      <img [src]="competition.logo" alt="" class="h-4 w-4" />
+                    }
+                    {{ competition.name }}
+                    <span class="text-xs sc-muted">{{ competition.country }}</span>
+                  </span>
+                </ng-template>
+              </p-select>
+            }
+
+            @if (sportsStore.loading()) {
               <div class="sc-skeleton h-24"></div>
             } @else if (selectedCompetition()) {
               <sc-fixture-picker
-                [fixtures]="footballStore.fixtures()"
+                [fixtures]="sportsStore.fixtures()"
                 [(selected)]="selectedFixtureIds"
               />
             }
@@ -165,15 +189,18 @@ import { GroupsStore } from '../../store/groups.store';
 export class DashboardComponent implements OnInit {
   readonly store = inject(GroupsStore);
   readonly authStore = inject(AuthStore);
-  readonly footballStore = inject(FootballStore);
+  readonly sportsStore = inject(SportsStore);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
 
   readonly showCreate = signal(false);
   readonly creating = signal(false);
   readonly step = signal<1 | 2>(1);
+  readonly selectedSport = signal<Sport | null>(null);
   readonly selectedCompetition = signal<Competition | null>(null);
   readonly selectedFixtureIds = signal(new Set<string>());
+  protected readonly sports = SPORTS;
+  protected readonly sportMeta = SPORT_META;
   name = '';
   description = '';
   mode: 'custom' | 'competition' = 'custom';
@@ -201,14 +228,22 @@ export class DashboardComponent implements OnInit {
       return;
     }
     this.step.set(2);
-    void this.footballStore.loadCompetitions();
+  }
+
+  selectSport(sport: Sport): void {
+    this.selectedSport.set(sport);
+    this.selectedCompetition.set(null);
+    this.selectedFixtureIds.set(new Set());
+    this.sportsStore.resetFixtures();
+    void this.sportsStore.loadCompetitions(sport);
   }
 
   onCompetitionChange(competition: Competition | null): void {
     this.selectedCompetition.set(competition);
     this.selectedFixtureIds.set(new Set());
-    if (competition) {
-      void this.footballStore.loadFixtures(competition.leagueId, competition.season);
+    const sport = this.selectedSport();
+    if (competition && sport) {
+      void this.sportsStore.loadFixtures(sport, competition.leagueId, competition.season);
     }
   }
 
@@ -220,8 +255,9 @@ export class DashboardComponent implements OnInit {
         name: this.name.trim(),
         description: this.description.trim() || undefined,
         competition:
-          this.mode === 'competition' && competition
+          this.mode === 'competition' && competition && this.selectedSport()
             ? {
+                sport: this.selectedSport()!,
                 leagueId: competition.leagueId,
                 season: competition.season,
                 name: competition.name,
@@ -242,9 +278,10 @@ export class DashboardComponent implements OnInit {
   private resetWizard(): void {
     this.step.set(1);
     this.mode = 'custom';
+    this.selectedSport.set(null);
     this.selectedCompetition.set(null);
     this.selectedFixtureIds.set(new Set());
-    this.footballStore.resetFixtures();
+    this.sportsStore.resetFixtures();
   }
 
   logout(): void {

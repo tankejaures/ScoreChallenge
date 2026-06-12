@@ -2,30 +2,30 @@ import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../core/api.service';
-import { Competition, FixtureView } from '../core/models';
+import { Competition, FixtureView, Sport } from '../core/models';
 
-interface FootballState {
+interface SportsState {
   competitions: Competition[];
   fixtures: FixtureView[];
   loading: boolean;
   error: string | null;
 }
 
-const initialState: FootballState = {
+const initialState: SportsState = {
   competitions: [],
   fixtures: [],
   loading: false,
   error: null,
 };
 
-export const FootballStore = signalStore(
+export const SportsStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withMethods((store, api = inject(ApiService)) => ({
-    async loadCompetitions(): Promise<void> {
-      patchState(store, { loading: true, error: null });
+    async loadCompetitions(sport: Sport): Promise<void> {
+      patchState(store, { loading: true, error: null, competitions: [] });
       try {
-        const competitions = await firstValueFrom(api.footballCompetitions());
+        const competitions = await firstValueFrom(api.sportCompetitions(sport));
         patchState(store, { competitions, loading: false });
       } catch {
         patchState(store, {
@@ -34,10 +34,12 @@ export const FootballStore = signalStore(
         });
       }
     },
-    async loadFixtures(leagueId: number, season: number): Promise<void> {
+    async loadFixtures(sport: Sport, leagueId: number, season: string): Promise<void> {
       patchState(store, { loading: true, error: null, fixtures: [] });
       try {
-        const fixtures = await firstValueFrom(api.competitionFixtures(leagueId, season));
+        const fixtures = await firstValueFrom(
+          api.competitionFixtures(sport, leagueId, season),
+        );
         patchState(store, { fixtures, loading: false });
       } catch {
         patchState(store, {

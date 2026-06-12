@@ -11,8 +11,8 @@ import { DatePipe } from '@angular/common';
 import { MatchView } from '../../core/models';
 import { FixturePickerComponent } from '../../shared/fixture-picker.component';
 import { AdminStore } from '../../store/admin.store';
-import { FootballStore } from '../../store/football.store';
 import { GroupStore } from '../../store/group.store';
+import { SportsStore } from '../../store/sports.store';
 
 @Component({
   selector: 'sc-matches-panel',
@@ -46,14 +46,14 @@ import { GroupStore } from '../../store/group.store';
           [modal]="true"
           [style]="{ width: '32rem' }"
         >
-          @if (footballStore.error()) {
-            <p-message severity="warn" [text]="footballStore.error()!" />
+          @if (sportsStore.error()) {
+            <p-message severity="warn" [text]="sportsStore.error()!" />
           }
-          @if (footballStore.loading()) {
+          @if (sportsStore.loading()) {
             <div class="sc-skeleton h-24"></div>
           } @else {
             <sc-fixture-picker
-              [fixtures]="footballStore.fixtures()"
+              [fixtures]="sportsStore.fixtures()"
               [excludedIds]="importedFixtureIds()"
               [(selected)]="selectedFixtureIds"
             />
@@ -172,7 +172,7 @@ export class MatchesPanelComponent implements OnInit {
   readonly groupId = input.required<string>();
   readonly store = inject(AdminStore);
   readonly groupStore = inject(GroupStore);
-  readonly footballStore = inject(FootballStore);
+  readonly sportsStore = inject(SportsStore);
   private readonly messages = inject(MessageService);
 
   teamA = '';
@@ -230,7 +230,8 @@ export class MatchesPanelComponent implements OnInit {
     }
     this.selectedFixtureIds.set(new Set());
     this.showPicker.set(true);
-    void this.footballStore.loadFixtures(
+    void this.sportsStore.loadFixtures(
+      summary.sport,
       summary.competitionLeagueId,
       summary.competitionSeason,
     );

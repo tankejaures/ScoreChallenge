@@ -27,8 +27,9 @@ export interface Group {
   scoringExactScore: number;
   scoringCorrectOutcome: number;
   scoringOneTeamScore: number;
+  sport: Sport;
   competitionLeagueId: number | null;
-  competitionSeason: number | null;
+  competitionSeason: string | null;
   competitionName: string | null;
   createdAt: string;
   participants?: Participant[];
@@ -41,8 +42,9 @@ export interface GroupSummary {
   scoringExactScore: number;
   scoringCorrectOutcome: number;
   scoringOneTeamScore: number;
+  sport: Sport;
   competitionLeagueId: number | null;
-  competitionSeason: number | null;
+  competitionSeason: string | null;
   competitionName: string | null;
   participantCount: number;
   isOwner: boolean;
@@ -50,20 +52,33 @@ export interface GroupSummary {
 
 export type FixtureStatus = 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'POSTPONED' | 'CANCELLED';
 
+export type Sport =
+  | 'FOOTBALL'
+  | 'AFL'
+  | 'BASEBALL'
+  | 'BASKETBALL'
+  | 'HANDBALL'
+  | 'HOCKEY'
+  | 'NFL'
+  | 'RUGBY'
+  | 'VOLLEYBALL';
+
 export interface Competition {
+  sport: Sport;
   leagueId: number;
   name: string;
   type: string;
-  logo: string;
+  logo: string | null;
   country: string;
-  season: number;
+  season: string;
 }
 
 export interface FixtureView {
   id: string;
   externalId: number;
+  sport: Sport;
   leagueId: number;
-  season: number;
+  season: string;
   round: string | null;
   teamA: string;
   teamB: string;
