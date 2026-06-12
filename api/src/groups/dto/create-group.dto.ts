@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
@@ -5,7 +6,20 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+
+export class CompetitionRefDto {
+  @IsInt()
+  leagueId: number;
+
+  @IsInt()
+  season: number;
+
+  @IsNotEmpty()
+  @MaxLength(120)
+  name: string;
+}
 
 export class CreateGroupDto {
   @IsNotEmpty()
@@ -33,4 +47,9 @@ export class CreateGroupDto {
   @Min(0)
   @Max(100)
   scoringOneTeamScore?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CompetitionRefDto)
+  competition?: CompetitionRefDto;
 }
