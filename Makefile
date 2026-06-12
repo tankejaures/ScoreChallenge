@@ -12,6 +12,7 @@ help: ## Affiche cette aide
 
 install: ## Installe les dépendances
 	cd $(API_DIR) && npm install
+	cd $(WEB_DIR) && npm install
 
 ## ----- Infrastructure -----
 
@@ -32,6 +33,9 @@ db-test-create: ## Crée la base de test
 dev-api: ## Lance l'API en mode watch
 	cd $(API_DIR) && npm run start:dev
 
+dev-web: ## Lance le frontend Angular (proxy vers l'API)
+	cd $(WEB_DIR) && npm start
+
 ## ----- Tests -----
 
 test-api: ## Tests unitaires API
@@ -40,12 +44,16 @@ test-api: ## Tests unitaires API
 test-e2e: ## Tests e2e API
 	cd $(API_DIR) && npm run test:e2e
 
-test: test-api test-e2e ## Tous les tests
+test-web: ## Tests unitaires web (vitest)
+	cd $(WEB_DIR) && npm test -- --no-watch
+
+test: test-api test-e2e test-web ## Tous les tests
 
 ## ----- Build -----
 
-build: ## Build de l'API
+build: ## Build api + web
 	cd $(API_DIR) && npm run build
+	cd $(WEB_DIR) && npm run build
 
 ## ----- État -----
 
