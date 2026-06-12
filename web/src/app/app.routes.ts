@@ -10,6 +10,10 @@ export const routes: Routes = [
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+    path: 'join/:inviteToken',
+    loadComponent: () => import('./features/join/join.component').then((m) => m.JoinComponent),
+  },
+  {
     path: 'login',
     loadComponent: () => import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
