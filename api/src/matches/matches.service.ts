@@ -131,6 +131,17 @@ export class MatchesService {
       where: { groupId },
       orderBy: { kickoffAt: 'asc' },
       include: {
+        fixture: {
+          select: {
+            status: true,
+            minute: true,
+            scoreA: true,
+            scoreB: true,
+            teamALogo: true,
+            teamBLogo: true,
+            round: true,
+          },
+        },
         predictions: {
           include: { participant: { select: { id: true, name: true } } },
         },

@@ -114,6 +114,59 @@ describe('Match list with prediction visibility (e2e)', () => {
     expect(body[0].predictions).toHaveLength(2);
   });
 
+  it('exposes live fixture data on imported matches', async () => {
+    const competitionGroup = await request(app.getHttpServer())
+      .post('/groups')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'CdM officielle',
+        competition: { leagueId: 1, season: 2026, name: 'World Cup' },
+      })
+      .expect(201);
+    const competitionGroupId = (competitionGroup.body as { id: string }).id;
+    const fixture = await prisma.fixture.create({
+      data: {
+        externalId: 555,
+        leagueId: 1,
+        season: 2026,
+        round: 'Group A - 1',
+        teamA: 'France',
+        teamB: 'Brésil',
+        teamALogo: 'fr.png',
+        teamBLogo: 'br.png',
+        kickoffAt: new Date(),
+        status: 'LIVE',
+        minute: 37,
+        scoreA: 1,
+        scoreB: 0,
+      },
+    });
+    await prisma.match.create({
+      data: {
+        groupId: competitionGroupId,
+        fixtureId: fixture.id,
+        teamA: 'France',
+        teamB: 'Brésil',
+        kickoffAt: fixture.kickoffAt,
+        predictionDeadline: fixture.kickoffAt,
+      },
+    });
+    const res = await request(app.getHttpServer())
+      .get(`/groups/${competitionGroupId}/matches`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const match = (
+      res.body as {
+        fixture: { status: string; minute: number; scoreA: number } | null;
+      }[]
+    )[0];
+    expect(match.fixture).toMatchObject({
+      status: 'LIVE',
+      minute: 37,
+      scoreA: 1,
+    });
+  });
+
   it('rejects a participant JWT from another group', async () => {
     const otherOwner = await registerOwner(app, 'other@test.io');
     const otherGroup = await request(app.getHttpServer())
