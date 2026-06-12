@@ -1,6 +1,6 @@
 import { Body, Controller, Param, Put, Req } from '@nestjs/common';
 import { Prediction } from '@prisma/client';
-import { RequestWithUser } from '../auth/jwt-auth.guard';
+import type { RequestWithUser } from '../auth/jwt-auth.guard';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto';
 import { PredictionsService } from './predictions.service';
 
