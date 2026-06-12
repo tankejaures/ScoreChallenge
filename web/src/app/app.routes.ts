@@ -44,6 +44,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/group/matches-page.component').then((m) => m.MatchesPageComponent),
       },
+      {
+        path: 'ranking',
+        loadComponent: () =>
+          import('./features/group/ranking-page.component').then((m) => m.RankingPageComponent),
+      },
+      {
+        path: 'stats',
+        loadComponent: () =>
+          import('./features/group/stats-page.component').then((m) => m.StatsPageComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },
