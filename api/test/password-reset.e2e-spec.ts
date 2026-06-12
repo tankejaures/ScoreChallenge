@@ -41,7 +41,7 @@ describe('Password reset (e2e)', () => {
     await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: credentials.email, password: 'newpassword456' })
-      .expect(201);
+      .expect(200);
   });
 
   it('returns 204 even for unknown email (no account enumeration)', async () => {
@@ -49,6 +49,13 @@ describe('Password reset (e2e)', () => {
       .post('/auth/forgot-password')
       .send({ email: 'unknown@test.io' })
       .expect(204);
+  });
+
+  it('rejects unknown token with 400', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/reset-password')
+      .send({ token: 'deadbeef', password: 'newpassword456' })
+      .expect(400);
   });
 
   it('rejects reused token with 400', async () => {

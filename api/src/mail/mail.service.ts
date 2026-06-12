@@ -10,7 +10,7 @@ export class MailService {
   constructor(private readonly config: ConfigService) {
     this.transporter = nodemailer.createTransport({
       host: this.config.get('SMTP_HOST', 'localhost'),
-      port: this.config.get<number>('SMTP_PORT', 1025),
+      port: Number(this.config.get('SMTP_PORT', '1025')),
       secure: false,
     });
   }

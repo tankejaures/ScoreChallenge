@@ -19,6 +19,11 @@ describe('codes.util', () => {
     expect(CODE_ALPHABET).not.toMatch(/[O0I1]/);
   });
 
+  it('generates unique codes (probabilistic)', () => {
+    const codes = new Set(Array.from({ length: 200 }, generateParticipantCode));
+    expect(codes.size).toBeGreaterThan(190);
+  });
+
   it('generates 12-char lowercase invite tokens', () => {
     const token = generateInviteToken();
     expect(token).toHaveLength(12);

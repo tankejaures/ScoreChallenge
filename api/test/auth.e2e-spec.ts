@@ -61,7 +61,7 @@ describe('Auth (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: credentials.email, password: credentials.password })
-      .expect(201);
+      .expect(200);
     expect((res.body as AuthResponseBody).token).toBeDefined();
   });
 
