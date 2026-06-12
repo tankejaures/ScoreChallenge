@@ -1,11 +1,15 @@
 import {
   Body,
   Controller,
+  Get,
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { RequestWithUser } from '../auth/jwt-auth.guard';
+import { GroupMemberGuard } from '../groups/guards/group-member.guard';
 import { GroupOwnerGuard } from '../groups/guards/group-owner.guard';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { SetResultDto } from './dto/set-result.dto';
@@ -15,6 +19,12 @@ import { MatchesService } from './matches.service';
 @Controller('groups/:groupId/matches')
 export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
+
+  @UseGuards(GroupMemberGuard)
+  @Get()
+  list(@Param('groupId') groupId: string, @Req() req: RequestWithUser) {
+    return this.matchesService.listForGroup(groupId, req.user!);
+  }
 
   @UseGuards(GroupOwnerGuard)
   @Post()

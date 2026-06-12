@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Match } from '@prisma/client';
+import { JwtPayload } from '../auth/jwt-payload.interface';
+import { PredictionsService } from '../predictions/predictions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoringService } from '../predictions/scoring.service';
 import { CreateMatchDto } from './dto/create-match.dto';
@@ -16,6 +18,7 @@ export class MatchesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scoringService: ScoringService,
+    private readonly predictionsService: PredictionsService,
   ) {}
 
   async create(groupId: string, dto: CreateMatchDto) {
@@ -84,6 +87,31 @@ export class MatchesService {
       return match;
     });
     return this.withStatus(updated);
+  }
+
+  async listForGroup(groupId: string, user: JwtPayload) {
+    const me = await this.predictionsService.resolveParticipant(user, groupId);
+    const matches = await this.prisma.match.findMany({
+      where: { groupId },
+      orderBy: { kickoffAt: 'asc' },
+      include: {
+        predictions: {
+          include: { participant: { select: { id: true, name: true } } },
+        },
+      },
+    });
+    const now = new Date();
+    return matches.map((match) => {
+      const revealed = now > match.predictionDeadline;
+      const { predictions, ...rest } = match;
+      return {
+        ...rest,
+        status: getMatchStatus(match, now),
+        myPrediction:
+          predictions.find((p) => p.participantId === me.id) ?? null,
+        predictions: revealed ? predictions : [],
+      };
+    });
   }
 
   async findInGroup(groupId: string, matchId: string): Promise<Match> {
