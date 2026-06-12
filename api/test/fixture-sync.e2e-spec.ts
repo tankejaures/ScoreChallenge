@@ -1,14 +1,14 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { FixtureSyncService } from '../src/football/fixture-sync.service';
+import { FixtureSyncService } from '../src/sports/fixture-sync.service';
 import { PrismaService } from '../src/prisma/prisma.service';
-import {
-  createTestAppWithFootballMock,
-  fakeApiFixture,
-  footballClientMock,
-} from './football.e2e-spec';
 import { registerOwner } from './groups.e2e-spec';
+import {
+  createTestAppWithSportsMock,
+  fakeGame,
+  sportsClientMock,
+} from './sports.e2e-spec';
 import { resetDb } from './test-utils';
 
 describe('FixtureSync (e2e)', () => {
@@ -21,14 +21,14 @@ describe('FixtureSync (e2e)', () => {
   let matchId: string;
 
   beforeAll(async () => {
-    app = await createTestAppWithFootballMock();
+    app = await createTestAppWithSportsMock();
     prisma = app.get(PrismaService);
     sync = app.get(FixtureSyncService);
   });
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    footballClientMock.isConfigured.mockReturnValue(true);
+    sportsClientMock.isConfigured.mockReturnValue(true);
     await resetDb(app);
     token = await registerOwner(app);
 
@@ -37,7 +37,12 @@ describe('FixtureSync (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'CdM',
-        competition: { leagueId: 1, season: 2026, name: 'World Cup' },
+        competition: {
+          sport: 'FOOTBALL',
+          leagueId: 1,
+          season: '2026',
+          name: 'World Cup',
+        },
       })
       .expect(201);
     groupId = (groupRes.body as { id: string }).id;
@@ -47,7 +52,7 @@ describe('FixtureSync (e2e)', () => {
       data: {
         externalId: 777,
         leagueId: 1,
-        season: 2026,
+        season: '2026',
         teamA: 'France',
         teamB: 'Brésil',
         kickoffAt: new Date(Date.now() - 60 * 1000),
@@ -66,12 +71,14 @@ describe('FixtureSync (e2e)', () => {
 
   afterAll(() => app.close());
 
-  it('updates live score and minute from the API', async () => {
-    footballClientMock.getFixturesByIds.mockResolvedValue([
-      fakeApiFixture({ id: 777, status: '1H', elapsed: 23, home: 1, away: 0 }),
+  it('updates live score from the API', async () => {
+    sportsClientMock.getLiveGames.mockResolvedValue([
+      fakeGame({ id: 777, status: 'LIVE', minute: 23, scoreA: 1, scoreB: 0 }),
     ]);
     await sync.sync();
-    expect(footballClientMock.getFixturesByIds).toHaveBeenCalledWith([777]);
+    expect(sportsClientMock.getLiveGames).toHaveBeenCalledWith('FOOTBALL', [
+      expect.objectContaining({ externalId: 777 }),
+    ]);
     const fixture = await prisma.fixture.findUniqueOrThrow({
       where: { id: fixtureId },
     });
@@ -89,8 +96,8 @@ describe('FixtureSync (e2e)', () => {
       data: { matchId, participantId: participant.id, scoreA: 2, scoreB: 0 },
     });
 
-    footballClientMock.getFixturesByIds.mockResolvedValue([
-      fakeApiFixture({ id: 777, status: 'FT', elapsed: 90, home: 2, away: 0 }),
+    sportsClientMock.getLiveGames.mockResolvedValue([
+      fakeGame({ id: 777, status: 'FINISHED', scoreA: 2, scoreB: 0 }),
     ]);
     await sync.sync();
 
@@ -111,21 +118,82 @@ describe('FixtureSync (e2e)', () => {
       data: { kickoffAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
     });
     await sync.sync();
-    expect(footballClientMock.getFixturesByIds).not.toHaveBeenCalled();
+    expect(sportsClientMock.getLiveGames).not.toHaveBeenCalled();
   });
 
   it('does nothing when the API key is missing', async () => {
-    footballClientMock.isConfigured.mockReturnValue(false);
+    sportsClientMock.isConfigured.mockReturnValue(false);
     await sync.sync();
-    expect(footballClientMock.getFixturesByIds).not.toHaveBeenCalled();
+    expect(sportsClientMock.getLiveGames).not.toHaveBeenCalled();
   });
 
   it('survives an API failure and keeps DB data intact', async () => {
-    footballClientMock.getFixturesByIds.mockRejectedValue(new Error('quota'));
+    sportsClientMock.getLiveGames.mockRejectedValue(new Error('quota'));
     await expect(sync.sync()).resolves.toBeUndefined();
     const fixture = await prisma.fixture.findUniqueOrThrow({
       where: { id: fixtureId },
     });
     expect(fixture.status).toBe('SCHEDULED');
+  });
+
+  it('routes basketball fixtures to the basketball adapter and settles', async () => {
+    const basketToken = await registerOwner(app, 'basket@test.io');
+    const groupRes = await request(app.getHttpServer())
+      .post('/groups')
+      .set('Authorization', `Bearer ${basketToken}`)
+      .send({
+        name: 'NBA Challenge',
+        competition: {
+          sport: 'BASKETBALL',
+          leagueId: 12,
+          season: '2025-2026',
+          name: 'NBA',
+        },
+      })
+      .expect(201);
+    const basketGroupId = (groupRes.body as { id: string }).id;
+
+    const fixture = await prisma.fixture.create({
+      data: {
+        externalId: 901,
+        sport: 'BASKETBALL',
+        leagueId: 12,
+        season: '2025-2026',
+        teamA: 'Lakers',
+        teamB: 'Celtics',
+        kickoffAt: new Date(Date.now() - 60 * 1000),
+        status: 'SCHEDULED',
+      },
+    });
+    await request(app.getHttpServer())
+      .post(`/groups/${basketGroupId}/matches/import`)
+      .set('Authorization', `Bearer ${basketToken}`)
+      .send({ fixtureIds: [fixture.id] })
+      .expect(201);
+
+    sportsClientMock.getLiveGames.mockResolvedValue([
+      fakeGame({
+        id: 901,
+        status: 'FINISHED',
+        scoreA: 102,
+        scoreB: 99,
+        leagueId: 12,
+        season: '2025-2026',
+      }),
+    ]);
+    await sync.sync();
+
+    expect(sportsClientMock.getLiveGames).toHaveBeenCalledWith(
+      'BASKETBALL',
+      [expect.objectContaining({ externalId: 901, season: '2025-2026' })],
+    );
+    const updated = await prisma.fixture.findUniqueOrThrow({
+      where: { id: fixture.id },
+    });
+    expect(updated.status).toBe('FINISHED');
+    const match = await prisma.match.findFirstOrThrow({
+      where: { groupId: basketGroupId },
+    });
+    expect(match.finalScoreA).toBe(102);
   });
 });

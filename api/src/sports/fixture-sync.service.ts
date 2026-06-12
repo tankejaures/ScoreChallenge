@@ -1,13 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { Fixture, Sport } from '@prisma/client';
 import { MatchSettlementService } from '../matches/match-settlement.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { FootballApiClient } from './football-api.client';
-import { FootballService } from './football.service';
-import { mapFixtureStatus } from './fixture-status.util';
+import { SPORT_CONFIG } from './sport.config';
+import { SportsApiClient } from './sports-api.client';
+import { SportsService } from './sports.service';
 
 const WATCH_BEFORE_KICKOFF_MS = 5 * 60 * 1000;
-const WATCH_AFTER_KICKOFF_MS = 3 * 60 * 60 * 1000;
+const MAX_WATCH_AFTER_KICKOFF_MS = Math.max(
+  ...Object.values(SPORT_CONFIG).map((c) => c.watchAfterKickoffMs),
+);
 
 @Injectable()
 export class FixtureSyncService {
@@ -15,8 +18,8 @@ export class FixtureSyncService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly client: FootballApiClient,
-    private readonly footballService: FootballService,
+    private readonly client: SportsApiClient,
+    private readonly sportsService: SportsService,
     private readonly settlementService: MatchSettlementService,
   ) {}
 
@@ -26,34 +29,57 @@ export class FixtureSyncService {
       return;
     }
     const now = Date.now();
-    const watched = await this.prisma.fixture.findMany({
+    const candidates = await this.prisma.fixture.findMany({
       where: {
         status: { in: ['SCHEDULED', 'LIVE'] },
         kickoffAt: {
-          gte: new Date(now - WATCH_AFTER_KICKOFF_MS),
+          gte: new Date(now - MAX_WATCH_AFTER_KICKOFF_MS),
           lte: new Date(now + WATCH_BEFORE_KICKOFF_MS),
         },
         matches: { some: {} },
       },
     });
+    // Fenêtre précise par sport
+    const watched = candidates.filter(
+      (f) =>
+        f.kickoffAt.getTime() >= now - SPORT_CONFIG[f.sport].watchAfterKickoffMs,
+    );
     if (watched.length === 0) {
       return;
     }
+    const bySport = new Map<Sport, Fixture[]>();
+    for (const fixture of watched) {
+      bySport.set(fixture.sport, [
+        ...(bySport.get(fixture.sport) ?? []),
+        fixture,
+      ]);
+    }
+    for (const [sport, fixtures] of bySport) {
+      await this.syncSport(sport, fixtures);
+    }
+  }
+
+  private async syncSport(sport: Sport, fixtures: Fixture[]): Promise<void> {
     try {
-      const entries = await this.client.getFixturesByIds(
-        watched.map((f) => f.externalId),
+      const games = await this.client.getLiveGames(
+        sport,
+        fixtures.map((f) => ({
+          externalId: f.externalId,
+          leagueId: f.leagueId,
+          season: f.season,
+          kickoffAt: f.kickoffAt,
+        })),
       );
-      for (const entry of entries) {
-        const previous = watched.find(
-          (f) => f.externalId === entry.fixture.id,
+      for (const game of games) {
+        const previous = fixtures.find(
+          (f) => f.externalId === game.externalId,
         );
         if (!previous) {
           continue;
         }
-        const updated = await this.footballService.upsertFixture(entry);
+        const updated = await this.sportsService.upsertGame(sport, game);
         const justFinished =
-          previous.status !== 'FINISHED' &&
-          mapFixtureStatus(entry.fixture.status.short) === 'FINISHED';
+          previous.status !== 'FINISHED' && game.status === 'FINISHED';
         if (
           justFinished &&
           updated.scoreA !== null &&
@@ -68,7 +94,7 @@ export class FixtureSyncService {
       }
     } catch (error) {
       this.logger.warn(
-        `Synchronisation API-Football échouée : ${(error as Error).message}`,
+        `Synchronisation ${sport} échouée : ${(error as Error).message}`,
       );
     }
   }

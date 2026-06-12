@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
-import { FootballModule } from './football/football.module';
+import { SportsModule } from './sports/sports.module';
 import { GroupsModule } from './groups/groups.module';
 import { MailModule } from './mail/mail.module';
 import { MatchesModule } from './matches/matches.module';
@@ -22,7 +22,7 @@ import { StatsModule } from './stats/stats.module';
     AuthModule,
     GroupsModule,
     MatchesModule,
-    FootballModule,
+    SportsModule,
     PredictionsModule,
     StatsModule,
   ],

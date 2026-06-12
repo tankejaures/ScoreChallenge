@@ -24,13 +24,13 @@ export class FootballAdapter implements SportApiAdapter {
       '/leagues?current=true',
     );
     return entries
-      .map((entry) => {
+      .map((entry): CompetitionDto | null => {
         const currentSeason = entry.seasons.find((s) => s.current);
         if (!currentSeason) {
           return null;
         }
         return {
-          sport: 'FOOTBALL' as const,
+          sport: 'FOOTBALL',
           leagueId: entry.league.id,
           name: entry.league.name,
           type: entry.league.type,
