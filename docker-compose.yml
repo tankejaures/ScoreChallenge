@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scorechallenge-db
+    environment:
+      POSTGRES_USER: scorechallenge
+      POSTGRES_PASSWORD: scorechallenge
+      POSTGRES_DB: scorechallenge
+    ports:
+      - '5435:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: scorechallenge-mail
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+volumes:
+  pgdata:
