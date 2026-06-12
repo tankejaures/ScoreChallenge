@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String               @id @default(cuid())
+  email        String               @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime             @default(now())
+  groups       Group[]
+  participants Participant[]
+  resetTokens  PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Group {
+  id                    String        @id @default(cuid())
+  name                  String
+  description           String?
+  inviteToken           String        @unique
+  ownerId               String
+  owner                 User          @relation(fields: [ownerId], references: [id])
+  scoringExactScore     Int           @default(5)
+  scoringCorrectOutcome Int           @default(3)
+  scoringOneTeamScore   Int           @default(1)
+  createdAt             DateTime      @default(now())
+  participants          Participant[]
+  matches               Match[]
+}
+
+model Participant {
+  id          String       @id @default(cuid())
+  groupId     String
+  group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name        String
+  code        String
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id])
+  createdAt   DateTime     @default(now())
+  predictions Prediction[]
+
+  @@unique([groupId, code])
+}
+
+model Match {
+  id                 String       @id @default(cuid())
+  groupId            String
+  group              Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teamA              String
+  teamB              String
+  kickoffAt          DateTime
+  predictionDeadline DateTime
+  finalScoreA        Int?
+  finalScoreB        Int?
+  createdAt          DateTime     @default(now())
+  predictions        Prediction[]
+}
+
+model Prediction {
+  id            String      @id @default(cuid())
+  matchId       String
+  match         Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  scoreA        Int
+  scoreB        Int
+  editCount     Int         @default(0)
+  lockedAt      DateTime?
+  points        Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([matchId, participantId])
+}
