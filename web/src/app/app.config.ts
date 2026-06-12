@@ -11,13 +11,14 @@ import { providePrimeNG } from 'primeng/config';
 import { routes } from './app.routes';
 import { ScPreset } from './theme';
 import { authInterceptor } from './core/auth.interceptor';
+import { loadingInterceptor } from './core/loading.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     { provide: LOCALE_ID, useValue: 'fr' },
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, loadingInterceptor])),
     provideAnimationsAsync(),
     providePrimeNG({ theme: { preset: ScPreset, options: { darkModeSelector: '.sc-dark' } } }),
   ],
