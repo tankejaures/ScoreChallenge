@@ -54,6 +54,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/group/stats-page.component').then((m) => m.StatsPageComponent),
       },
+      {
+        path: 'admin',
+        loadComponent: () =>
+          import('./features/group-admin/admin-page.component').then((m) => m.AdminPageComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },

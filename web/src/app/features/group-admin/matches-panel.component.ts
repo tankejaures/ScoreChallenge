@@ -1,0 +1,198 @@
+import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MessageService } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
+import { DatePickerModule } from 'primeng/datepicker';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
+import { TagModule } from 'primeng/tag';
+import { DatePipe } from '@angular/common';
+import { MatchView } from '../../core/models';
+import { AdminStore } from '../../store/admin.store';
+import { GroupStore } from '../../store/group.store';
+
+@Component({
+  selector: 'sc-matches-panel',
+  imports: [
+    FormsModule,
+    DatePipe,
+    ButtonModule,
+    DatePickerModule,
+    InputNumberModule,
+    InputTextModule,
+    MessageModule,
+    TagModule,
+  ],
+  template: `
+    <div class="flex flex-col gap-4">
+      @if (store.error()) {
+        <p-message severity="error" [text]="store.error()!" />
+      }
+
+      <form class="rounded-xl border p-4 flex flex-col gap-3" (ngSubmit)="create()">
+        <h3 class="font-semibold">Nouveau match</h3>
+        <div class="flex gap-2">
+          <input
+            pInputText
+            name="teamA"
+            placeholder="Équipe A"
+            class="flex-1 min-w-0"
+            required
+            [(ngModel)]="teamA"
+            data-testid="match-team-a"
+          />
+          <input
+            pInputText
+            name="teamB"
+            placeholder="Équipe B"
+            class="flex-1 min-w-0"
+            required
+            [(ngModel)]="teamB"
+            data-testid="match-team-b"
+          />
+        </div>
+        <label class="text-sm opacity-70">Coup d’envoi</label>
+        <p-datepicker
+          name="kickoff"
+          [(ngModel)]="kickoffAt"
+          [showTime]="true"
+          dateFormat="dd/mm/yy"
+          appendTo="body"
+          data-testid="match-kickoff"
+        />
+        <label class="text-sm opacity-70">Date limite de pronostic</label>
+        <p-datepicker
+          name="deadline"
+          [(ngModel)]="predictionDeadline"
+          [showTime]="true"
+          dateFormat="dd/mm/yy"
+          appendTo="body"
+          data-testid="match-deadline"
+        />
+        <p-button
+          type="submit"
+          label="Créer le match"
+          [loading]="store.saving()"
+          data-testid="match-create"
+        />
+      </form>
+
+      <ul class="flex flex-col gap-3">
+        @for (match of groupStore.matches(); track match.id) {
+          <li class="rounded-xl border p-4 flex flex-col gap-2" data-testid="admin-match-row">
+            <div class="flex items-center justify-between">
+              <span class="font-medium">{{ match.teamA }} vs {{ match.teamB }}</span>
+              <p-tag [value]="statusLabel(match)" />
+            </div>
+            <span class="text-sm opacity-70">
+              {{ match.kickoffAt | date: 'EEE d MMM HH:mm' }}
+            </span>
+
+            @if (match.status !== 'UPCOMING') {
+              <div class="flex items-center gap-2">
+                <p-inputnumber
+                  [(ngModel)]="resultDrafts[match.id].scoreA"
+                  [min]="0"
+                  [max]="99"
+                  [showButtons]="true"
+                  inputStyleClass="w-14 text-center"
+                  [name]="'resA-' + match.id"
+                  data-testid="result-score-a"
+                />
+                <span>–</span>
+                <p-inputnumber
+                  [(ngModel)]="resultDrafts[match.id].scoreB"
+                  [min]="0"
+                  [max]="99"
+                  [showButtons]="true"
+                  inputStyleClass="w-14 text-center"
+                  [name]="'resB-' + match.id"
+                  data-testid="result-score-b"
+                />
+                <p-button
+                  [label]="match.status === 'FINISHED' ? 'Corriger' : 'Valider le score'"
+                  size="small"
+                  [loading]="store.saving()"
+                  (onClick)="saveResult(match)"
+                  data-testid="result-save"
+                />
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  `,
+})
+export class MatchesPanelComponent implements OnInit {
+  readonly groupId = input.required<string>();
+  readonly store = inject(AdminStore);
+  readonly groupStore = inject(GroupStore);
+  private readonly messages = inject(MessageService);
+
+  teamA = '';
+  teamB = '';
+  kickoffAt: Date | null = null;
+  predictionDeadline: Date | null = null;
+  readonly resultDrafts: Record<string, { scoreA: number; scoreB: number }> = {};
+
+  readonly creating = signal(false);
+
+  ngOnInit(): void {
+    void this.groupStore.loadMatches(this.groupId()).then(() => this.syncDrafts());
+  }
+
+  private syncDrafts(): void {
+    for (const match of this.groupStore.matches()) {
+      this.resultDrafts[match.id] ??= {
+        scoreA: match.finalScoreA ?? 0,
+        scoreB: match.finalScoreB ?? 0,
+      };
+    }
+  }
+
+  statusLabel(match: MatchView): string {
+    return match.status === 'UPCOMING'
+      ? 'À venir'
+      : match.status === 'LIVE'
+        ? 'En cours'
+        : 'Terminé';
+  }
+
+  async create(): Promise<void> {
+    if (!this.teamA.trim() || !this.teamB.trim() || !this.kickoffAt || !this.predictionDeadline) {
+      return;
+    }
+    try {
+      await this.store.createMatch(this.groupId(), {
+        teamA: this.teamA.trim(),
+        teamB: this.teamB.trim(),
+        kickoffAt: this.kickoffAt.toISOString(),
+        predictionDeadline: this.predictionDeadline.toISOString(),
+      });
+      this.teamA = '';
+      this.teamB = '';
+      this.kickoffAt = null;
+      this.predictionDeadline = null;
+      this.syncDrafts();
+      this.messages.add({ severity: 'success', summary: 'Match créé', life: 2000 });
+    } catch {
+      // erreur exposée par store.error()
+    }
+  }
+
+  async saveResult(match: MatchView): Promise<void> {
+    const draft = this.resultDrafts[match.id];
+    try {
+      await this.store.setResult(this.groupId(), match.id, draft.scoreA, draft.scoreB);
+      this.messages.add({
+        severity: 'success',
+        summary: 'Points calculés et classement mis à jour 🏆',
+        life: 2500,
+      });
+    } catch {
+      // erreur exposée par store.error()
+    }
+  }
+}
