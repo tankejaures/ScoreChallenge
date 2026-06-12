@@ -34,7 +34,7 @@ model Group {
   description           String?
   inviteToken           String        @unique
   ownerId               String
-  owner                 User          @relation(fields: [ownerId], references: [id])
+  owner                 User          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   scoringExactScore     Int           @default(5)
   scoringCorrectOutcome Int           @default(3)
   scoringOneTeamScore   Int           @default(1)
@@ -69,6 +69,8 @@ model Match {
   finalScoreB        Int?
   createdAt          DateTime     @default(now())
   predictions        Prediction[]
+
+  @@index([groupId])
 }
 
 model Prediction {
