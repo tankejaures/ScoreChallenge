@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { ownerGuard } from './core/guards';
+import { groupAccessGuard, ownerGuard } from './core/guards';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -31,6 +31,20 @@ export const routes: Routes = [
     path: 'reset-password',
     loadComponent: () =>
       import('./features/auth/reset-password.component').then((m) => m.ResetPasswordComponent),
+  },
+  {
+    path: 'groups/:id',
+    canActivate: [groupAccessGuard],
+    loadComponent: () =>
+      import('./features/group/group-shell.component').then((m) => m.GroupShellComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'matches' },
+      {
+        path: 'matches',
+        loadComponent: () =>
+          import('./features/group/matches-page.component').then((m) => m.MatchesPageComponent),
+      },
+    ],
   },
   { path: '**', redirectTo: 'login' },
 ];
