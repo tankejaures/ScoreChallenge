@@ -73,5 +73,8 @@ export const AuthStore = signalStore(
     logout(): void {
       auth.clearOwnerSession();
     },
+    leaveGroup(groupId: string): void {
+      auth.clearParticipantSession(groupId);
+    },
   })),
 );

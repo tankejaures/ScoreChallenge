@@ -43,6 +43,10 @@ export class AuthService {
     return readJson<ParticipantSession>(PARTICIPANT_PREFIX + groupId);
   }
 
+  clearParticipantSession(groupId: string): void {
+    localStorage.removeItem(PARTICIPANT_PREFIX + groupId);
+  }
+
   tokenForRequest(): string | null {
     const groupId = this.activeGroupId();
     if (groupId) {

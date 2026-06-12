@@ -41,6 +41,14 @@ describe('AuthService', () => {
     expect(service.participantSession('g2')).toBeNull();
   });
 
+  it('clears a participant session for one group only', () => {
+    service.setParticipantSession(session);
+    service.setParticipantSession({ ...session, groupId: 'g2' });
+    service.clearParticipantSession('g1');
+    expect(service.participantSession('g1')).toBeNull();
+    expect(service.participantSession('g2')).not.toBeNull();
+  });
+
   it('prefers the participant token inside its group context', () => {
     service.setOwnerSession(owner);
     service.setParticipantSession(session);
