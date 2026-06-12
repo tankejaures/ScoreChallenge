@@ -1,6 +1,9 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 import { MatchCardComponent } from '../../shared/match-card.component';
+import { PredictionDialogComponent } from './prediction-dialog.component';
 import { GroupStore } from '../../store/group.store';
 import { MatchView } from '../../core/models';
 
@@ -16,8 +19,15 @@ function canPredict(match: MatchView): boolean {
 
 @Component({
   selector: 'sc-matches-page',
-  imports: [MatchCardComponent],
+  imports: [MatchCardComponent, PredictionDialogComponent, ToastModule],
+  providers: [MessageService],
   template: `
+    <p-toast position="top-center" />
+    <sc-prediction-dialog
+      [match]="selectedMatch()"
+      (close)="selectedMatch.set(null)"
+      (saved)="onSaved()"
+    />
     <div class="max-w-2xl mx-auto p-4 flex flex-col gap-4">
       @if (store.loading()) {
         <p class="text-center opacity-70">Chargement…</p>
@@ -51,6 +61,7 @@ function canPredict(match: MatchView): boolean {
 export class MatchesPageComponent implements OnInit {
   readonly store = inject(GroupStore);
   private readonly route = inject(ActivatedRoute);
+  private readonly messageService = inject(MessageService);
 
   readonly selectedMatch = signal<MatchView | null>(null);
 
@@ -72,5 +83,13 @@ export class MatchesPageComponent implements OnInit {
 
   open(match: MatchView): void {
     this.selectedMatch.set(match);
+  }
+
+  onSaved(): void {
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Pronostic enregistré ✔',
+      life: 2500,
+    });
   }
 }
