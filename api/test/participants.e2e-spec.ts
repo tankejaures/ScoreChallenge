@@ -68,4 +68,24 @@ describe('Participants (e2e)', () => {
       .send({ name: 'Un de trop' })
       .expect(409);
   });
+
+  it('rejects deleting a participant of another group with 404', async () => {
+    const otherGroup = await request(app.getHttpServer())
+      .post('/groups')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Autre groupe' })
+      .expect(201);
+    const otherGroupId = (otherGroup.body as { id: string }).id;
+    const otherParticipant = await request(app.getHttpServer())
+      .post(`/groups/${otherGroupId}/participants`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Léa' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .delete(
+        `/groups/${groupId}/participants/${(otherParticipant.body as { id: string }).id}`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
 });

@@ -37,15 +37,18 @@ export class ParticipantsService {
   }
 
   async addToGroup(groupId: string, dto: CreateParticipantDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const count = await tx.participant.count({ where: { groupId } });
-      if (count >= MAX_PARTICIPANTS_PER_GROUP) {
-        throw new ConflictException(
-          `Limite de ${MAX_PARTICIPANTS_PER_GROUP} participants atteinte pour ce groupe`,
-        );
-      }
-      return this.createWithUniqueCode(tx, { groupId, name: dto.name });
-    });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const count = await tx.participant.count({ where: { groupId } });
+        if (count >= MAX_PARTICIPANTS_PER_GROUP) {
+          throw new ConflictException(
+            `Limite de ${MAX_PARTICIPANTS_PER_GROUP} participants atteinte pour ce groupe`,
+          );
+        }
+        return this.createWithUniqueCode(tx, { groupId, name: dto.name });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async remove(groupId: string, participantId: string): Promise<void> {

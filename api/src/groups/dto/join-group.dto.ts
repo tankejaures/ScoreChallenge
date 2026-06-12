@@ -1,9 +1,11 @@
-import { IsNotEmpty } from 'class-validator';
+import { IsString, Length } from 'class-validator';
 
 export class JoinGroupDto {
-  @IsNotEmpty()
+  @IsString()
+  @Length(12, 12)
   inviteToken: string;
 
-  @IsNotEmpty()
+  @IsString()
+  @Length(6, 6)
   code: string;
 }

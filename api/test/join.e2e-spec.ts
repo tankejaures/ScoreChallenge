@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { ParticipantJwtPayload } from '../src/auth/jwt-payload.interface';
 import { registerOwner } from './groups.e2e-spec';
 import { createTestApp, resetDb } from './test-utils';
 
@@ -60,6 +62,12 @@ describe('Join flow (e2e)', () => {
     expect(body.token).toBeDefined();
     expect(body.participant.name).toBe('Marc');
     expect(body.groupId).toBeDefined();
+
+    const payload = app
+      .get(JwtService)
+      .verify<ParticipantJwtPayload>(body.token);
+    expect(payload.role).toBe('participant');
+    expect(payload.groupId).toBe(body.groupId);
   });
 
   it('accepts lowercase code input', async () => {
