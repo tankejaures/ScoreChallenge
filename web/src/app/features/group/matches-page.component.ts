@@ -28,29 +28,32 @@ function canPredict(match: MatchView): boolean {
       (close)="selectedMatch.set(null)"
       (saved)="onSaved()"
     />
-    <div class="max-w-2xl mx-auto p-4 flex flex-col gap-4">
+    <div class="max-w-2xl mx-auto p-4 flex flex-col gap-4 sc-stagger">
       @if (store.loading()) {
-        <p class="text-center opacity-70">Chargement…</p>
+        <div class="sc-skeleton h-36"></div>
+        <div class="sc-skeleton h-36"></div>
+        <div class="sc-skeleton h-36"></div>
       } @else if (store.matches().length === 0) {
-        <p class="text-center opacity-70" data-testid="empty-matches">
+        <div class="sc-card p-8 text-center sc-muted" data-testid="empty-matches">
+          <div class="text-3xl mb-2">📅</div>
           Aucun match pour l’instant. L’organisateur n’a pas encore créé de match.
-        </p>
+        </div>
       }
 
-      @if (upcoming().length > 0) {
-        <h2 class="font-semibold">À venir</h2>
-        @for (m of upcoming(); track m.id) {
-          <sc-match-card [match]="m" [canPredict]="isPredictable(m)" (predict)="open(m)" />
-        }
-      }
       @if (live().length > 0) {
-        <h2 class="font-semibold">En cours</h2>
+        <h2 class="sc-display text-sm uppercase tracking-widest sc-muted">En cours</h2>
         @for (m of live(); track m.id) {
           <sc-match-card [match]="m" />
         }
       }
+      @if (upcoming().length > 0) {
+        <h2 class="sc-display text-sm uppercase tracking-widest sc-muted">À venir</h2>
+        @for (m of upcoming(); track m.id) {
+          <sc-match-card [match]="m" [canPredict]="isPredictable(m)" (predict)="open(m)" />
+        }
+      }
       @if (finished().length > 0) {
-        <h2 class="font-semibold">Terminés</h2>
+        <h2 class="sc-display text-sm uppercase tracking-widest sc-muted">Terminés</h2>
         @for (m of finished(); track m.id) {
           <sc-match-card [match]="m" />
         }

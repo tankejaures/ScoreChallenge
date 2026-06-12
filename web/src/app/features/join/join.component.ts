@@ -11,31 +11,40 @@ import { JoinStore } from '../../store/join.store';
   imports: [FormsModule, ButtonModule, InputOtpModule, MessageModule],
   template: `
     <div class="min-h-dvh flex items-center justify-center p-4">
-      <div class="w-full max-w-sm flex flex-col gap-4 text-center">
+      <div class="w-full max-w-sm flex flex-col gap-5 text-center sc-fade-up">
         @if (store.info(); as invite) {
-          <h1 class="text-2xl font-bold">{{ invite.name }}</h1>
+          <div class="sc-pill self-center">🎟 Vous êtes invité·e</div>
+          <h1 class="sc-display text-3xl leading-tight">{{ invite.name }}</h1>
           @if (invite.description) {
-            <p class="opacity-70">{{ invite.description }}</p>
+            <p class="sc-muted">{{ invite.description }}</p>
           }
-          <p class="text-sm">Entrez votre code personnel pour rejoindre le groupe :</p>
-          @if (store.error()) {
-            <p-message severity="error" [text]="store.error()!" />
-          }
-          <form class="flex flex-col items-center gap-4" (ngSubmit)="join()">
-            <p-inputotp name="code" [(ngModel)]="code" [length]="6" data-testid="join-code-input" />
-            <p-button
-              type="submit"
-              label="Rejoindre"
-              [loading]="store.loading()"
-              [disabled]="code.length !== 6"
-              styleClass="w-full"
-              data-testid="join-submit"
-            />
-          </form>
+          <div class="sc-card-raised p-6 flex flex-col gap-4">
+            <p class="text-sm sc-muted">Entrez votre code personnel pour entrer sur le terrain :</p>
+            @if (store.error()) {
+              <p-message severity="error" [text]="store.error()!" />
+            }
+            <form class="flex flex-col items-center gap-4" (ngSubmit)="join()">
+              <p-inputotp
+                name="code"
+                [(ngModel)]="code"
+                [length]="6"
+                data-testid="join-code-input"
+              />
+              <p-button
+                type="submit"
+                label="Rejoindre le groupe"
+                [loading]="store.loading()"
+                [disabled]="code.length !== 6"
+                styleClass="w-full"
+                data-testid="join-submit"
+              />
+            </form>
+          </div>
+          <p class="text-xs sc-muted">Pas de code ? Demandez-le à l’organisateur du groupe.</p>
         } @else if (store.notFound()) {
           <p-message severity="error" text="Invitation introuvable. Vérifiez le lien reçu." />
         } @else {
-          <p class="opacity-70">Chargement…</p>
+          <div class="sc-skeleton h-48"></div>
         }
       </div>
     </div>

@@ -8,54 +8,55 @@ import { GroupStore } from '../../store/group.store';
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
     <div class="min-h-dvh flex flex-col">
-      <header class="p-4 border-b flex items-center justify-between" data-testid="group-header">
-        <div>
-          <h1 class="font-bold text-lg">{{ store.summary()?.name ?? '…' }}</h1>
+      <header
+        class="sc-header sticky top-0 z-10 p-4 flex items-center justify-between"
+        data-testid="group-header"
+      >
+        <div class="flex flex-col gap-1">
+          <h1 class="sc-display text-lg leading-tight">{{ store.summary()?.name ?? '…' }}</h1>
           @if (store.summary()?.isOwner) {
-            <span class="text-xs rounded-full border px-2 py-0.5">Organisateur</span>
+            <span class="sc-pill self-start">Organisateur</span>
           }
         </div>
-        <span class="text-sm opacity-70">
-          {{ store.summary()?.participantCount ?? 0 }} joueurs
-        </span>
+        <span class="text-sm sc-muted">{{ store.summary()?.participantCount ?? 0 }} joueurs</span>
       </header>
 
-      <main class="flex-1 overflow-y-auto pb-20">
+      <main class="flex-1 overflow-y-auto pb-24">
         <router-outlet />
       </main>
 
       <nav
-        class="fixed bottom-0 inset-x-0 border-t bg-white flex justify-around py-2"
+        class="sc-bottom-nav fixed bottom-0 inset-x-0 flex justify-around items-center py-2 px-1"
         data-testid="group-nav"
       >
         <a
           routerLink="matches"
-          routerLinkActive="font-bold"
-          class="flex flex-col items-center text-sm"
+          routerLinkActive="sc-active"
+          class="sc-nav-item flex flex-col items-center text-xs gap-0.5"
         >
-          <i class="pi pi-calendar"></i><span>Matchs</span>
+          <i class="pi pi-calendar text-base"></i><span>Matchs</span>
         </a>
         <a
           routerLink="ranking"
-          routerLinkActive="font-bold"
-          class="flex flex-col items-center text-sm"
+          routerLinkActive="sc-active"
+          class="sc-nav-item flex flex-col items-center text-xs gap-0.5"
         >
-          <i class="pi pi-trophy"></i><span>Classement</span>
+          <i class="pi pi-trophy text-base"></i><span>Classement</span>
         </a>
         <a
           routerLink="stats"
-          routerLinkActive="font-bold"
-          class="flex flex-col items-center text-sm"
+          routerLinkActive="sc-active"
+          class="sc-nav-item flex flex-col items-center text-xs gap-0.5"
         >
-          <i class="pi pi-chart-bar"></i><span>Stats</span>
+          <i class="pi pi-chart-bar text-base"></i><span>Stats</span>
         </a>
         @if (store.summary()?.isOwner) {
           <a
             routerLink="admin"
-            routerLinkActive="font-bold"
-            class="flex flex-col items-center text-sm"
+            routerLinkActive="sc-active"
+            class="sc-nav-item flex flex-col items-center text-xs gap-0.5"
           >
-            <i class="pi pi-cog"></i><span>Admin</span>
+            <i class="pi pi-cog text-base"></i><span>Admin</span>
           </a>
         }
       </nav>

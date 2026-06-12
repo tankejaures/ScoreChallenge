@@ -13,12 +13,12 @@ import { AuthStore } from '../../store/auth.store';
   template: `
     <div class="min-h-dvh flex items-center justify-center p-4">
       <form
-        class="w-full max-w-sm flex flex-col gap-4"
+        class="w-full max-w-sm flex flex-col gap-4 sc-card-raised p-6 sc-fade-up"
         data-testid="login-form"
         (ngSubmit)="submit()"
       >
-        <h1 class="text-2xl font-bold text-center">ScoreChallenge</h1>
-        <p class="text-center text-sm opacity-70">Connexion organisateur</p>
+        <h1 class="sc-wordmark text-3xl text-center">ScoreChallenge</h1>
+        <p class="text-center text-sm sc-muted">Connexion organisateur</p>
         @if (store.error()) {
           <p-message severity="error" [text]="store.error()!" />
         }

@@ -1,12 +1,247 @@
 @import 'tailwindcss';
 
+/* ===== ScoreChallenge — design tokens « stade nocturne » ===== */
 :root {
-  --sc-font: 'Inter', system-ui, sans-serif;
+  --sc-font-body: 'Barlow', system-ui, sans-serif;
+  --sc-font-display: 'Chakra Petch', 'Barlow', sans-serif;
+
+  /* Pelouse profonde */
+  --sc-pitch-950: #06120c;
+  --sc-pitch-900: #0b1a12;
+  --sc-pitch-800: #11251a;
+  --sc-pitch-700: #1a3526;
+  --sc-pitch-600: #245031;
+
+  /* Volt électrique (accent) */
+  --sc-volt-400: #d4f63a;
+  --sc-volt-500: #c0ea16;
+  --sc-volt-600: #a3cc0a;
+
+  --sc-surface: var(--sc-pitch-800);
+  --sc-surface-raised: var(--sc-pitch-700);
+  --sc-border: rgba(212, 246, 58, 0.14);
+  --sc-text: #f2f7ee;
+  --sc-text-dim: rgba(242, 247, 238, 0.62);
+
+  --sc-gold: #f5c84c;
+  --sc-silver: #c9d2dd;
+  --sc-bronze: #d39a6a;
+
+  --sc-radius: 1rem;
+}
+
+html {
+  background: var(--sc-pitch-900);
 }
 
 html,
 body {
   height: 100%;
   margin: 0;
-  font-family: var(--sc-font);
+  font-family: var(--sc-font-body);
+  color: var(--sc-text);
+}
+
+/* Fond stade : halo des projecteurs + lignes de pelouse */
+body {
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(212, 246, 58, 0.1), transparent 55%),
+    repeating-linear-gradient(
+      180deg,
+      var(--sc-pitch-900) 0,
+      var(--sc-pitch-900) 72px,
+      var(--sc-pitch-950) 72px,
+      var(--sc-pitch-950) 144px
+    );
+  background-attachment: fixed;
+}
+
+/* ===== Utilitaires sémantiques ===== */
+.sc-display {
+  font-family: var(--sc-font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.sc-score {
+  font-family: var(--sc-font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.sc-card {
+  background: linear-gradient(160deg, var(--sc-surface), var(--sc-pitch-900));
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.sc-card-raised {
+  background: linear-gradient(160deg, var(--sc-surface-raised), var(--sc-surface));
+  border: 1px solid rgba(212, 246, 58, 0.22);
+  border-radius: var(--sc-radius);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+}
+
+.sc-pill {
+  border: 1px solid var(--sc-border);
+  border-radius: 999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sc-volt-400);
+}
+
+.sc-muted {
+  color: var(--sc-text-dim);
+}
+
+.sc-wordmark {
+  font-family: var(--sc-font-display);
+  font-weight: 700;
+  background: linear-gradient(95deg, var(--sc-text) 40%, var(--sc-volt-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Navigation basse flottante */
+.sc-bottom-nav {
+  background: rgba(11, 26, 18, 0.86);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--sc-border);
+}
+
+.sc-nav-item {
+  color: var(--sc-text-dim);
+  border-radius: 999px;
+  padding: 0.375rem 0.875rem;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.sc-nav-item:active {
+  transform: scale(0.94);
+}
+
+.sc-nav-item.sc-active {
+  color: var(--sc-pitch-950);
+  background: var(--sc-volt-400);
+  font-weight: 700;
+  box-shadow: 0 0 18px rgba(212, 246, 58, 0.45);
+}
+
+/* En-tête verre dépoli */
+.sc-header {
+  background: rgba(11, 26, 18, 0.82);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--sc-border);
+}
+
+/* ===== Animations ===== */
+@keyframes sc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sc-fade-up {
+  animation: sc-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sc-stagger > * {
+  animation: sc-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sc-stagger > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.sc-stagger > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.sc-stagger > *:nth-child(4) {
+  animation-delay: 0.18s;
+}
+.sc-stagger > *:nth-child(5) {
+  animation-delay: 0.24s;
+}
+.sc-stagger > *:nth-child(n + 6) {
+  animation-delay: 0.3s;
+}
+
+@keyframes sc-rise {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.sc-podium-step {
+  animation: sc-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: bottom;
+}
+
+@keyframes sc-live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 246, 58, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(212, 246, 58, 0);
+  }
+}
+
+.sc-live {
+  animation: sc-live-pulse 1.8s ease-in-out infinite;
+}
+
+/* Skeleton de chargement */
+@keyframes sc-shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.sc-skeleton {
+  border-radius: var(--sc-radius);
+  background: linear-gradient(
+    90deg,
+    var(--sc-surface) 25%,
+    var(--sc-surface-raised) 50%,
+    var(--sc-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: sc-shimmer 1.4s linear infinite;
+}
+
+/* Cartes interactives */
+.sc-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.sc-lift:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 246, 58, 0.4);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-fade-up,
+  .sc-stagger > *,
+  .sc-podium-step,
+  .sc-live,
+  .sc-skeleton {
+    animation: none;
+  }
 }

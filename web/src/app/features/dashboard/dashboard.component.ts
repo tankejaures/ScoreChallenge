@@ -12,11 +12,11 @@ import { GroupsStore } from '../../store/groups.store';
   selector: 'sc-dashboard',
   imports: [FormsModule, RouterLink, ButtonModule, DialogModule, InputTextModule, TextareaModule],
   template: `
-    <div class="max-w-2xl mx-auto p-4 flex flex-col gap-4">
+    <div class="max-w-2xl mx-auto p-4 flex flex-col gap-4 sc-stagger">
       <header class="flex items-center justify-between">
         <div>
-          <h1 class="text-xl font-bold">Mes groupes</h1>
-          <p class="text-sm opacity-70">Bonjour {{ authStore.user()?.name }}</p>
+          <h1 class="sc-wordmark text-2xl">ScoreChallenge</h1>
+          <p class="text-sm sc-muted">Bonjour {{ authStore.user()?.name }} 👋</p>
         </div>
         <p-button label="Déconnexion" severity="secondary" [text]="true" (onClick)="logout()" />
       </header>
@@ -29,22 +29,24 @@ import { GroupsStore } from '../../store/groups.store';
       />
 
       @if (store.loading()) {
-        <p class="text-center opacity-70">Chargement…</p>
+        <div class="sc-skeleton h-20"></div>
+        <div class="sc-skeleton h-20"></div>
       } @else if (store.groups().length === 0) {
-        <p class="text-center opacity-70" data-testid="empty-groups">
+        <div class="sc-card p-8 text-center sc-muted" data-testid="empty-groups">
+          <div class="text-3xl mb-2">⚽️</div>
           Aucun groupe pour l’instant. Créez-en un pour lancer les pronostics !
-        </p>
+        </div>
       }
 
       @for (group of store.groups(); track group.id) {
         <a
           [routerLink]="['/groups', group.id]"
-          class="block rounded-xl border p-4 hover:shadow transition"
+          class="sc-card sc-lift block p-4"
           data-testid="group-card"
         >
-          <div class="font-semibold">{{ group.name }}</div>
+          <div class="sc-display text-lg">{{ group.name }}</div>
           @if (group.description) {
-            <div class="text-sm opacity-70">{{ group.description }}</div>
+            <div class="text-sm sc-muted">{{ group.description }}</div>
           }
         </a>
       }

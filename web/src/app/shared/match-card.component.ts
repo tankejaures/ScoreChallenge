@@ -18,40 +18,49 @@ const STATUS_LABEL: Record<MatchStatus, { label: string; severity: 'info' | 'war
   selector: 'sc-match-card',
   imports: [DatePipe, ButtonModule, TagModule],
   template: `
-    <article class="rounded-xl border p-4 flex flex-col gap-3" data-testid="match-card">
+    <article
+      class="sc-card sc-lift p-4 flex flex-col gap-3"
+      [class.sc-live]="match().status === 'LIVE'"
+      data-testid="match-card"
+    >
       <div class="flex items-center justify-between">
         <p-tag
           [value]="statusInfo().label"
           [severity]="statusInfo().severity"
           data-testid="match-status"
         />
-        <span class="text-sm opacity-70">{{ match().kickoffAt | date: 'EEE d MMM HH:mm' }}</span>
+        <span class="text-sm sc-muted">{{ match().kickoffAt | date: 'EEE d MMM HH:mm' }}</span>
       </div>
 
-      <div class="flex items-center justify-center gap-3 text-lg font-semibold">
-        <span class="flex-1 text-right">{{ match().teamA }}</span>
+      <div class="flex items-center justify-center gap-3 text-lg">
+        <span class="flex-1 text-right sc-display">{{ match().teamA }}</span>
         @if (match().status === 'FINISHED') {
-          <span class="text-2xl tabular-nums" data-testid="final-score">
+          <span class="sc-score text-3xl" data-testid="final-score">
             {{ match().finalScoreA }} – {{ match().finalScoreB }}
           </span>
         } @else {
-          <span class="opacity-40">vs</span>
+          <span class="sc-muted text-sm uppercase tracking-widest">vs</span>
         }
-        <span class="flex-1">{{ match().teamB }}</span>
+        <span class="flex-1 sc-display">{{ match().teamB }}</span>
       </div>
 
       @if (match().myPrediction; as prediction) {
-        <div class="text-center text-sm" data-testid="my-prediction">
-          Mon pronostic : <strong>{{ prediction.scoreA }} – {{ prediction.scoreB }}</strong>
+        <div class="text-center text-sm sc-muted" data-testid="my-prediction">
+          Mon pronostic :
+          <strong class="sc-score text-base" style="color: var(--sc-text)">
+            {{ prediction.scoreA }} – {{ prediction.scoreB }}
+          </strong>
           @if (prediction.points !== null) {
-            <span class="ml-2 font-bold">+{{ prediction.points }} pts</span>
+            <span class="ml-2 sc-score" style="color: var(--sc-volt-400)">
+              +{{ prediction.points }} pts
+            </span>
           }
         </div>
       }
 
       @if (countdown(); as remaining) {
-        <p class="text-center text-xs opacity-70" data-testid="countdown">
-          Fin des pronostics dans {{ remaining }}
+        <p class="text-center text-xs" style="color: var(--sc-volt-400)" data-testid="countdown">
+          ⏱ Fin des pronostics dans {{ remaining }}
         </p>
       }
 
@@ -63,25 +72,25 @@ const STATUS_LABEL: Record<MatchStatus, { label: string; severity: 'info' | 'war
           data-testid="predict-button"
         />
         @if (match().myPrediction && match().myPrediction!.editCount === 0) {
-          <p class="text-center text-xs opacity-70">1 modification possible</p>
+          <p class="text-center text-xs sc-muted">1 modification possible</p>
         }
       } @else if (match().status !== 'FINISHED' && match().myPrediction) {
-        <p class="text-center text-xs opacity-70">Pronostic verrouillé</p>
+        <p class="text-center text-xs sc-muted">🔒 Pronostic verrouillé</p>
       }
 
       @if (match().predictions.length > 0) {
         <details class="text-sm">
-          <summary class="cursor-pointer opacity-70">
+          <summary class="cursor-pointer sc-muted">
             Pronostics du groupe ({{ match().predictions.length }})
           </summary>
           <ul class="mt-2 flex flex-col gap-1">
             @for (p of match().predictions; track p.id) {
-              <li class="flex justify-between">
+              <li class="flex justify-between border-b border-white/5 pb-1">
                 <span>{{ p.participant?.name }}</span>
-                <span class="tabular-nums">
+                <span class="sc-score">
                   {{ p.scoreA }} – {{ p.scoreB }}
                   @if (p.points !== null) {
-                    <strong class="ml-1">+{{ p.points }}</strong>
+                    <strong class="ml-1" style="color: var(--sc-volt-400)">+{{ p.points }}</strong>
                   }
                 </span>
               </li>
