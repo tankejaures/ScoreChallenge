@@ -7,8 +7,8 @@ import { Match } from '@prisma/client';
 import type { JwtPayload } from '../auth/jwt-payload.interface';
 import { PredictionsService } from '../predictions/predictions.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ScoringService } from '../predictions/scoring.service';
 import { CreateMatchDto } from './dto/create-match.dto';
+import { MatchSettlementService } from './match-settlement.service';
 import { SetResultDto } from './dto/set-result.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 import { getMatchStatus, MatchStatus } from './match-status.util';
@@ -17,7 +17,7 @@ import { getMatchStatus, MatchStatus } from './match-status.util';
 export class MatchesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly scoringService: ScoringService,
+    private readonly settlementService: MatchSettlementService,
     private readonly predictionsService: PredictionsService,
   ) {}
 
@@ -54,38 +54,12 @@ export class MatchesService {
   }
 
   async setResult(groupId: string, matchId: string, dto: SetResultDto) {
-    const existing = await this.prisma.match.findUnique({
-      where: { id: matchId },
-      include: { group: true },
-    });
-    if (!existing || existing.groupId !== groupId) {
-      throw new NotFoundException('Match introuvable');
-    }
-    const config = {
-      exactScore: existing.group.scoringExactScore,
-      correctOutcome: existing.group.scoringCorrectOutcome,
-      oneTeamScore: existing.group.scoringOneTeamScore,
-    };
-
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const match = await tx.match.update({
-        where: { id: matchId },
-        data: { finalScoreA: dto.scoreA, finalScoreB: dto.scoreB },
-      });
-      const predictions = await tx.prediction.findMany({ where: { matchId } });
-      for (const prediction of predictions) {
-        const points = this.scoringService.computePoints(
-          { a: prediction.scoreA, b: prediction.scoreB },
-          { a: dto.scoreA, b: dto.scoreB },
-          config,
-        );
-        await tx.prediction.update({
-          where: { id: prediction.id },
-          data: { points },
-        });
-      }
-      return match;
-    });
+    await this.findInGroup(groupId, matchId);
+    const updated = await this.settlementService.settle(
+      matchId,
+      dto.scoreA,
+      dto.scoreB,
+    );
     return this.withStatus(updated);
   }
 
