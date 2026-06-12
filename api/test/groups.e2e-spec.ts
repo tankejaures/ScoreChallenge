@@ -109,17 +109,24 @@ describe('Groups (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'CdM entre potes',
-        competition: { leagueId: 1, season: 2026, name: 'World Cup' },
+        competition: {
+          sport: 'BASKETBALL',
+          leagueId: 12,
+          season: '2025-2026',
+          name: 'NBA',
+        },
       })
       .expect(201);
     const body = res.body as {
+      sport: string;
       competitionLeagueId: number;
-      competitionSeason: number;
+      competitionSeason: string;
       competitionName: string;
     };
-    expect(body.competitionLeagueId).toBe(1);
-    expect(body.competitionSeason).toBe(2026);
-    expect(body.competitionName).toBe('World Cup');
+    expect(body.sport).toBe('BASKETBALL');
+    expect(body.competitionLeagueId).toBe(12);
+    expect(body.competitionSeason).toBe('2025-2026');
+    expect(body.competitionName).toBe('NBA');
   });
 
   it('exposes competition info in the summary', async () => {
@@ -128,7 +135,12 @@ describe('Groups (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'CdM entre potes',
-        competition: { leagueId: 1, season: 2026, name: 'World Cup' },
+        competition: {
+          sport: 'BASKETBALL',
+          leagueId: 12,
+          season: '2025-2026',
+          name: 'NBA',
+        },
       })
       .expect(201);
     const groupId = (created.body as { id: string }).id;
@@ -136,7 +148,11 @@ describe('Groups (e2e)', () => {
       .get(`/groups/${groupId}/summary`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    const summary = res.body as { competitionLeagueId: number | null };
-    expect(summary.competitionLeagueId).toBe(1);
+    const summary = res.body as {
+      sport: string;
+      competitionLeagueId: number | null;
+    };
+    expect(summary.sport).toBe('BASKETBALL');
+    expect(summary.competitionLeagueId).toBe(12);
   });
 });

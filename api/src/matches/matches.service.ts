@@ -94,6 +94,7 @@ export class MatchesService {
     }
     const foreign = fixtures.find(
       (f) =>
+        f.sport !== group.sport ||
         f.leagueId !== group.competitionLeagueId ||
         f.season !== group.competitionSeason,
     );

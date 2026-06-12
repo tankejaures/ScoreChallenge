@@ -15,7 +15,12 @@ async function createCompetitionGroup(
     .set('Authorization', `Bearer ${token}`)
     .send({
       name: 'CdM',
-      competition: { leagueId: 1, season: 2026, name: 'World Cup' },
+      competition: {
+        sport: 'FOOTBALL',
+        leagueId: 1,
+        season: '2026',
+        name: 'World Cup',
+      },
     })
     .expect(201);
   return (res.body as { id: string }).id;
@@ -25,7 +30,7 @@ async function seedFixture(
   app: INestApplication<App>,
   externalId: number,
   leagueId = 1,
-  season = 2026,
+  season = '2026',
 ): Promise<string> {
   const prisma = app.get(PrismaService);
   const fixture = await prisma.fixture.create({
@@ -95,11 +100,32 @@ describe('Match import (e2e)', () => {
 
   it('rejects fixtures from another competition', async () => {
     const groupId = await createCompetitionGroup(app, token);
-    const otherLeagueFixture = await seedFixture(app, 202, 39, 2026);
+    const otherLeagueFixture = await seedFixture(app, 202, 39, '2026');
     await request(app.getHttpServer())
       .post(`/groups/${groupId}/matches/import`)
       .set('Authorization', `Bearer ${token}`)
       .send({ fixtureIds: [otherLeagueFixture] })
+      .expect(400);
+  });
+
+  it('rejects fixtures from another sport', async () => {
+    const groupId = await createCompetitionGroup(app, token);
+    const prisma = app.get(PrismaService);
+    const basketFixture = await prisma.fixture.create({
+      data: {
+        externalId: 901,
+        sport: 'BASKETBALL',
+        leagueId: 1,
+        season: '2026',
+        teamA: 'Lakers',
+        teamB: 'Celtics',
+        kickoffAt: new Date(FUTURE_KICKOFF),
+      },
+    });
+    await request(app.getHttpServer())
+      .post(`/groups/${groupId}/matches/import`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ fixtureIds: [basketFixture.id] })
       .expect(400);
   });
 

@@ -1,5 +1,7 @@
+import { Sport } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -10,11 +12,15 @@ import {
 } from 'class-validator';
 
 export class CompetitionRefDto {
+  @IsEnum(Sport)
+  sport: Sport;
+
   @IsInt()
   leagueId: number;
 
-  @IsInt()
-  season: number;
+  @IsNotEmpty()
+  @MaxLength(12)
+  season: string;
 
   @IsNotEmpty()
   @MaxLength(120)

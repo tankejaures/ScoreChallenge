@@ -120,7 +120,12 @@ describe('Match list with prediction visibility (e2e)', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'CdM officielle',
-        competition: { leagueId: 1, season: 2026, name: 'World Cup' },
+        competition: {
+          sport: 'FOOTBALL',
+          leagueId: 1,
+          season: '2026',
+          name: 'World Cup',
+        },
       })
       .expect(201);
     const competitionGroupId = (competitionGroup.body as { id: string }).id;
@@ -128,7 +133,7 @@ describe('Match list with prediction visibility (e2e)', () => {
       data: {
         externalId: 555,
         leagueId: 1,
-        season: 2026,
+        season: '2026',
         round: 'Group A - 1',
         teamA: 'France',
         teamB: 'Brésil',
