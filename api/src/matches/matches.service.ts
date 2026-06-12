@@ -8,6 +8,7 @@ import type { JwtPayload } from '../auth/jwt-payload.interface';
 import { PredictionsService } from '../predictions/predictions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMatchDto } from './dto/create-match.dto';
+import { ImportFixturesDto } from './dto/import-fixtures.dto';
 import { MatchSettlementService } from './match-settlement.service';
 import { SetResultDto } from './dto/set-result.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
@@ -22,6 +23,14 @@ export class MatchesService {
   ) {}
 
   async create(groupId: string, dto: CreateMatchDto) {
+    const group = await this.prisma.group.findUniqueOrThrow({
+      where: { id: groupId },
+    });
+    if (group.competitionLeagueId !== null) {
+      throw new BadRequestException(
+        'Ce groupe est lié à une compétition : importez les matchs officiels',
+      );
+    }
     this.assertDeadlineBeforeKickoff(dto.predictionDeadline, dto.kickoffAt);
     const match = await this.prisma.match.create({
       data: {
@@ -54,13 +63,66 @@ export class MatchesService {
   }
 
   async setResult(groupId: string, matchId: string, dto: SetResultDto) {
-    await this.findInGroup(groupId, matchId);
+    const match = await this.findInGroup(groupId, matchId);
+    if (match.fixtureId !== null) {
+      throw new BadRequestException(
+        'Score géré automatiquement pour les matchs officiels',
+      );
+    }
     const updated = await this.settlementService.settle(
       matchId,
       dto.scoreA,
       dto.scoreB,
     );
     return this.withStatus(updated);
+  }
+
+  async importFixtures(groupId: string, dto: ImportFixturesDto) {
+    const group = await this.prisma.group.findUniqueOrThrow({
+      where: { id: groupId },
+    });
+    if (group.competitionLeagueId === null) {
+      throw new BadRequestException(
+        'Ce groupe n’est pas lié à une compétition : créez les matchs manuellement',
+      );
+    }
+    const fixtures = await this.prisma.fixture.findMany({
+      where: { id: { in: dto.fixtureIds } },
+    });
+    if (fixtures.length !== dto.fixtureIds.length) {
+      throw new BadRequestException('Certains matchs sont introuvables');
+    }
+    const foreign = fixtures.find(
+      (f) =>
+        f.leagueId !== group.competitionLeagueId ||
+        f.season !== group.competitionSeason,
+    );
+    if (foreign) {
+      throw new BadRequestException(
+        'Certains matchs n’appartiennent pas à la compétition du groupe',
+      );
+    }
+    const existing = await this.prisma.match.findMany({
+      where: { groupId, fixtureId: { in: dto.fixtureIds } },
+      select: { fixtureId: true },
+    });
+    const alreadyImported = new Set(existing.map((m) => m.fixtureId));
+    const toCreate = fixtures.filter((f) => !alreadyImported.has(f.id));
+    const created = await this.prisma.$transaction(
+      toCreate.map((fixture) =>
+        this.prisma.match.create({
+          data: {
+            groupId,
+            fixtureId: fixture.id,
+            teamA: fixture.teamA,
+            teamB: fixture.teamB,
+            kickoffAt: fixture.kickoffAt,
+            predictionDeadline: fixture.kickoffAt,
+          },
+        }),
+      ),
+    );
+    return created.map((match) => this.withStatus(match));
   }
 
   async listForGroup(groupId: string, user: JwtPayload) {
