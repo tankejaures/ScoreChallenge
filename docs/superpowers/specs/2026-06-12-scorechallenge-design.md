@@ -110,11 +110,13 @@ GET    /groups/:id/participants/:pid/stats   # stats individuelles
 
 1. **Pronostic** : refusé si `now > predictionDeadline` ou si le score final est saisi. `editCount` : création = 0 ; une seule modification autorisée → `editCount = 1` + `lockedAt`. Toute tentative suivante → `403`.
 2. **Visibilité** : les pronostics des autres participants sont invisibles tant que la deadline n'est pas passée (anti-copie).
-3. **Calcul des points** (`ScoringService`, fonction pure, testée unitairement). Catégories exclusives, la plus haute l'emporte :
+3. **Calcul des points** (`ScoringService`, fonction pure, testée unitairement). Catégories exclusives, la plus haute l'emporte — hiérarchie stricte évaluée dans cet ordre :
    - Score exact → `scoringExactScore` (déf. 5)
    - Bon vainqueur ou bon nul → `scoringCorrectOutcome` (déf. 3)
    - Bon score d'une seule équipe → `scoringOneTeamScore` (déf. 1)
    - Sinon → 0
+
+   Précision (décision actée le 2026-06-12) : un pronostic qui a le bon vainqueur ET le bon score d'une équipe (ex. pronostic 3-1, résultat 3-0) rapporte les points de la catégorie la plus haute, soit « bon vainqueur » (3). Le « bon score d'une équipe » (1) ne s'applique que lorsque le vainqueur prédit est faux (ex. pronostic 0-2, résultat 3-2 : le 2 de l'équipe B est juste → 1 point).
 4. **Codes participants** : 6 caractères alphanumériques sans caractères ambigus (pas de O/0, I/1), uniques par groupe. `inviteToken` : nanoid 12 caractères.
 5. **Validation DTO** (`class-validator`) : scores entiers 0–99, `predictionDeadline ≤ kickoffAt`, noms non vides, etc.
 6. **Limite de taille** : maximum **50 participants par groupe** (`MAX_PARTICIPANTS_PER_GROUP = 50`). `POST /groups/:id/participants` répond `409` au-delà ; message clair côté UI.

@@ -77,10 +77,10 @@ Son code est son identité dans le groupe. Son appareil le mémorise : il ne le 
 |---|---|---|
 | **Score exact** | 5 | Pronostic 3 – 2 |
 | **Bon vainqueur ou bon nul** | 3 | Pronostic 2 – 1 (victoire équipe A prédite) |
-| **Bon score d'une seule équipe** | 1 | Pronostic 3 – 0 (le 3 de l'équipe A est juste) |
-| **Tout faux** | 0 | Pronostic 0 – 2 |
+| **Bon score d'une seule équipe** | 1 | Pronostic 0 – 2 (vainqueur faux, mais le 2 de l'équipe B est juste) |
+| **Tout faux** | 0 | Pronostic 1 – 0 |
 
-Les catégories sont exclusives : on marque les points de la meilleure catégorie atteinte, une seule fois.
+Les catégories sont exclusives et hiérarchiques : on marque les points de la meilleure catégorie atteinte, une seule fois. Exemple : pronostic 3 – 1 pour un résultat 3 – 2 = bon vainqueur (3 pts), même si le score de l'équipe A est aussi juste — la catégorie la plus haute l'emporte.
 
 ### Cycle de vie d'un match
 
