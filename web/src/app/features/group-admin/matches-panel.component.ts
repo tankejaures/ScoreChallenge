@@ -1,14 +1,17 @@
-import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { TagModule } from 'primeng/tag';
 import { DatePipe } from '@angular/common';
 import { MatchView } from '../../core/models';
+import { FixturePickerComponent } from '../../shared/fixture-picker.component';
 import { AdminStore } from '../../store/admin.store';
+import { FootballStore } from '../../store/football.store';
 import { GroupStore } from '../../store/group.store';
 
 @Component({
@@ -17,10 +20,12 @@ import { GroupStore } from '../../store/group.store';
     FormsModule,
     DatePipe,
     ButtonModule,
+    DialogModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
     TagModule,
+    FixturePickerComponent,
   ],
   template: `
     <div class="flex flex-col gap-4">
@@ -28,55 +33,91 @@ import { GroupStore } from '../../store/group.store';
         <p-message severity="error" [text]="store.error()!" />
       }
 
-      <form class="rounded-xl border p-4 flex flex-col gap-3" (ngSubmit)="create()">
-        <h3 class="font-semibold">Nouveau match</h3>
-        <div class="flex gap-2">
-          <input
-            pInputText
-            name="teamA"
-            placeholder="Équipe A"
-            class="flex-1 min-w-0"
-            required
-            [(ngModel)]="teamA"
-            data-testid="match-team-a"
-          />
-          <input
-            pInputText
-            name="teamB"
-            placeholder="Équipe B"
-            class="flex-1 min-w-0"
-            required
-            [(ngModel)]="teamB"
-            data-testid="match-team-b"
-          />
-        </div>
-        <label class="text-sm opacity-70" for="kickoff">Coup d’envoi</label>
-        <input
-          pInputText
-          type="datetime-local"
-          id="kickoff"
-          name="kickoff"
-          required
-          [(ngModel)]="kickoffAt"
-          data-testid="match-kickoff"
-        />
-        <label class="text-sm opacity-70" for="deadline">Date limite de pronostic</label>
-        <input
-          pInputText
-          type="datetime-local"
-          id="deadline"
-          name="deadline"
-          required
-          [(ngModel)]="predictionDeadline"
-          data-testid="match-deadline"
-        />
+      @if (isCompetitionGroup()) {
         <p-button
-          type="submit"
-          label="Créer le match"
-          [loading]="store.saving()"
-          data-testid="match-create"
+          label="Ajouter des matchs"
+          icon="pi pi-plus"
+          (onClick)="openPicker()"
+          data-testid="open-fixture-picker"
         />
-      </form>
+        <p-dialog
+          header="Matchs de la compétition"
+          [(visible)]="showPickerValue"
+          [modal]="true"
+          [style]="{ width: '32rem' }"
+        >
+          @if (footballStore.error()) {
+            <p-message severity="warn" [text]="footballStore.error()!" />
+          }
+          @if (footballStore.loading()) {
+            <div class="sc-skeleton h-24"></div>
+          } @else {
+            <sc-fixture-picker
+              [fixtures]="footballStore.fixtures()"
+              [excludedIds]="importedFixtureIds()"
+              [(selected)]="selectedFixtureIds"
+            />
+          }
+          <p-button
+            label="Importer"
+            styleClass="w-full mt-3"
+            [disabled]="selectedFixtureIds().size === 0"
+            [loading]="store.saving()"
+            (onClick)="importSelection()"
+            data-testid="import-fixtures"
+          />
+        </p-dialog>
+      } @else {
+        <form class="rounded-xl border p-4 flex flex-col gap-3" (ngSubmit)="create()">
+          <h3 class="font-semibold">Nouveau match</h3>
+          <div class="flex gap-2">
+            <input
+              pInputText
+              name="teamA"
+              placeholder="Équipe A"
+              class="flex-1 min-w-0"
+              required
+              [(ngModel)]="teamA"
+              data-testid="match-team-a"
+            />
+            <input
+              pInputText
+              name="teamB"
+              placeholder="Équipe B"
+              class="flex-1 min-w-0"
+              required
+              [(ngModel)]="teamB"
+              data-testid="match-team-b"
+            />
+          </div>
+          <label class="text-sm opacity-70" for="kickoff">Coup d’envoi</label>
+          <input
+            pInputText
+            type="datetime-local"
+            id="kickoff"
+            name="kickoff"
+            required
+            [(ngModel)]="kickoffAt"
+            data-testid="match-kickoff"
+          />
+          <label class="text-sm opacity-70" for="deadline">Date limite de pronostic</label>
+          <input
+            pInputText
+            type="datetime-local"
+            id="deadline"
+            name="deadline"
+            required
+            [(ngModel)]="predictionDeadline"
+            data-testid="match-deadline"
+          />
+          <p-button
+            type="submit"
+            label="Créer le match"
+            [loading]="store.saving()"
+            data-testid="match-create"
+          />
+        </form>
+      }
 
       <ul class="flex flex-col gap-3">
         @for (match of groupStore.matches(); track match.id) {
@@ -89,7 +130,9 @@ import { GroupStore } from '../../store/group.store';
               {{ match.kickoffAt | date: 'EEE d MMM HH:mm' }}
             </span>
 
-            @if (match.status !== 'UPCOMING') {
+            @if (match.fixtureId) {
+              <p class="text-xs sc-muted">⚙️ Score automatique (compétition officielle)</p>
+            } @else if (match.status !== 'UPCOMING') {
               <div class="flex items-center gap-2">
                 <p-inputnumber
                   [(ngModel)]="resultDrafts[match.id].scoreA"
@@ -129,6 +172,7 @@ export class MatchesPanelComponent implements OnInit {
   readonly groupId = input.required<string>();
   readonly store = inject(AdminStore);
   readonly groupStore = inject(GroupStore);
+  readonly footballStore = inject(FootballStore);
   private readonly messages = inject(MessageService);
 
   teamA = '';
@@ -138,6 +182,25 @@ export class MatchesPanelComponent implements OnInit {
   readonly resultDrafts: Record<string, { scoreA: number; scoreB: number }> = {};
 
   readonly creating = signal(false);
+  readonly showPicker = signal(false);
+  readonly selectedFixtureIds = signal(new Set<string>());
+
+  readonly isCompetitionGroup = computed(
+    () => this.groupStore.summary()?.competitionLeagueId != null,
+  );
+  readonly importedFixtureIds = computed(() =>
+    this.groupStore
+      .matches()
+      .map((m) => m.fixtureId)
+      .filter((id): id is string => id !== null),
+  );
+
+  get showPickerValue(): boolean {
+    return this.showPicker();
+  }
+  set showPickerValue(value: boolean) {
+    this.showPicker.set(value);
+  }
 
   ngOnInit(): void {
     void this.groupStore.loadMatches(this.groupId()).then(() => this.syncDrafts());
@@ -158,6 +221,30 @@ export class MatchesPanelComponent implements OnInit {
       : match.status === 'LIVE'
         ? 'En cours'
         : 'Terminé';
+  }
+
+  openPicker(): void {
+    const summary = this.groupStore.summary();
+    if (!summary?.competitionLeagueId || !summary.competitionSeason) {
+      return;
+    }
+    this.selectedFixtureIds.set(new Set());
+    this.showPicker.set(true);
+    void this.footballStore.loadFixtures(
+      summary.competitionLeagueId,
+      summary.competitionSeason,
+    );
+  }
+
+  async importSelection(): Promise<void> {
+    try {
+      await this.store.importMatches(this.groupId(), [...this.selectedFixtureIds()]);
+      this.showPicker.set(false);
+      this.syncDrafts();
+      this.messages.add({ severity: 'success', summary: 'Matchs importés ✔', life: 2000 });
+    } catch {
+      // erreur exposée par store.error()
+    }
   }
 
   async create(): Promise<void> {

@@ -68,6 +68,17 @@ export const AdminStore = signalStore(
           throw error;
         }
       },
+      async importMatches(groupId: string, fixtureIds: string[]): Promise<void> {
+        patchState(store, { saving: true, error: null });
+        try {
+          await firstValueFrom(api.importMatches(groupId, fixtureIds));
+          await groupStore.loadMatches(groupId);
+          patchState(store, { saving: false });
+        } catch (error) {
+          patchState(store, { saving: false, error: 'Import des matchs impossible' });
+          throw error;
+        }
+      },
       async updateMatch(
         groupId: string,
         matchId: string,
