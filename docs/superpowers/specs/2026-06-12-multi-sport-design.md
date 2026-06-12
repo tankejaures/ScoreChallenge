@@ -49,12 +49,21 @@ api/src/sports/
 ### Interface `SportApiAdapter`
 
 ```typescript
+interface WatchedFixtureRef {
+  externalId: number;
+  leagueId: number;
+  season: string;
+  kickoffAt: Date;
+}
+
 interface SportApiAdapter {
   getCompetitions(): Promise<CompetitionDto[]>;
-  getGames(leagueId: number, season: number): Promise<NormalizedGame[]>;
-  getGamesByIds(externalIds: number[]): Promise<NormalizedGame[]>;
+  getGames(leagueId: number, season: string): Promise<NormalizedGame[]>;
+  getLiveGames(refs: WatchedFixtureRef[]): Promise<NormalizedGame[]>;
 }
 ```
+
+`getLiveGames` : le football v3 supporte le batch `fixtures?ids=a-b-c` (chunks de 20) ; les APIs v1 n'ont pas de batch par ids → l'adaptateur générique groupe les refs par `(leagueId, season, date UTC du kickoff)` et fait une requête `/games?league=&season=&date=` par groupe, puis filtre sur les `externalId` demandés.
 
 `NormalizedGame` = format pivot unique (seul format vu par le reste du code) :
 
@@ -62,7 +71,7 @@ interface SportApiAdapter {
 interface NormalizedGame {
   externalId: number;
   leagueId: number;
-  season: number;
+  season: string;
   round: string | null;
   teamA: string;
   teamB: string;
@@ -87,7 +96,7 @@ Les 8 APIs v1 partagent la même forme (`/leagues`, `/games?league=&season=`, `/
   - `PST`, `POST` → POSTPONED
   - `CANC`, `ABD`, `WO` → CANCELLED
   - **tout autre code → LIVE** (les codes de période sont innombrables ; un match ni programmé, ni fini, ni annulé est en cours)
-- **Saisons** : `/leagues` v1 expose `seasons[].season` (pas `year` comme v3) ; certaines saisons sont des chaînes (« 2025-2026 ») → conservées telles quelles côté API mais notre `season Int` reçoit l'année de début (parsing : premiers 4 chiffres).
+- **Saisons** : `/leagues` v1 expose `seasons[].season` (pas `year` comme v3) ; certaines saisons sont des chaînes (« 2025-2026 ») et l'API exige cette valeur exacte en paramètre de requête → **`season` devient `String` partout** (Prisma `Fixture.season`, `Group.competitionSeason`, DTO, front). Football : « 2026 ».
 - **Minute** : non fournie de façon fiable en v1 → `minute: null`, le front n'affiche la minute que si présente (déjà le cas).
 
 ### Fenêtre de surveillance par sport (`sport.config.ts`)
