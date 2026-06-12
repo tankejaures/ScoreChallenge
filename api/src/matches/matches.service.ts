@@ -102,7 +102,10 @@ export class MatchesService {
     });
     const now = new Date();
     return matches.map((match) => {
-      const revealed = now > match.predictionDeadline;
+      // Pronostics révélés après la deadline OU dès que le résultat est saisi
+      // (tout est alors verrouillé, plus rien à copier).
+      const revealed =
+        now > match.predictionDeadline || match.finalScoreA !== null;
       const { predictions, ...rest } = match;
       return {
         ...rest,

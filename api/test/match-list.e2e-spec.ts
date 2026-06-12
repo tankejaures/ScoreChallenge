@@ -100,6 +100,20 @@ describe('Match list with prediction visibility (e2e)', () => {
     expect(body[0].predictions[0].participant.name).toBeDefined();
   });
 
+  it('reveals predictions once the final result is set, even before deadline', async () => {
+    await request(app.getHttpServer())
+      .post(`/groups/${groupId}/matches/${matchId}/result`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ scoreA: 1, scoreB: 0 })
+      .expect(201);
+    const res = await request(app.getHttpServer())
+      .get(`/groups/${groupId}/matches`)
+      .set('Authorization', `Bearer ${participantToken}`)
+      .expect(200);
+    const body = res.body as Array<{ predictions: unknown[] }>;
+    expect(body[0].predictions).toHaveLength(2);
+  });
+
   it('rejects a participant JWT from another group', async () => {
     const otherOwner = await registerOwner(app, 'other@test.io');
     const otherGroup = await request(app.getHttpServer())
