@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -20,9 +23,12 @@ export interface AuthResult {
 
 @Injectable()
 export class AuthService {
+  private static readonly RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 h
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResult> {
@@ -47,6 +53,42 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
     return this.buildAuthResult(user);
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return; // pas d'énumération de comptes
+    }
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.passwordResetToken.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + AuthService.RESET_TOKEN_TTL_MS),
+      },
+    });
+    await this.mailService.sendPasswordReset(email, token);
+  }
+
+  async resetPassword(token: string, password: string): Promise<void> {
+    const stored = await this.prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
+    if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+      throw new BadRequestException('Lien invalide ou expiré');
+    }
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: stored.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: stored.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
   }
 
   private buildAuthResult(user: {
