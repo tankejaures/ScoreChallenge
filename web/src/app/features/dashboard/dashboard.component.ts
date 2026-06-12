@@ -1,16 +1,33 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
+import { ApiService } from '../../core/api.service';
+import { Competition } from '../../core/models';
+import { FixturePickerComponent } from '../../shared/fixture-picker.component';
 import { AuthStore } from '../../store/auth.store';
+import { FootballStore } from '../../store/football.store';
 import { GroupsStore } from '../../store/groups.store';
 
 @Component({
   selector: 'sc-dashboard',
-  imports: [FormsModule, RouterLink, ButtonModule, DialogModule, InputTextModule, TextareaModule],
+  imports: [
+    FormsModule,
+    RouterLink,
+    ButtonModule,
+    DialogModule,
+    InputTextModule,
+    MessageModule,
+    SelectModule,
+    TextareaModule,
+    FixturePickerComponent,
+  ],
   template: `
     <div class="max-w-2xl mx-auto p-4 flex flex-col gap-4 sc-stagger">
       <header class="flex items-center justify-between">
@@ -45,6 +62,9 @@ import { GroupsStore } from '../../store/groups.store';
           data-testid="group-card"
         >
           <div class="sc-display text-lg">{{ group.name }}</div>
+          @if (group.competitionName) {
+            <div class="text-xs sc-muted">🏆 {{ group.competitionName }}</div>
+          }
           @if (group.description) {
             <div class="text-sm sc-muted">{{ group.description }}</div>
           }
@@ -55,19 +75,89 @@ import { GroupsStore } from '../../store/groups.store';
         header="Nouveau groupe"
         [(visible)]="showCreateValue"
         [modal]="true"
-        [style]="{ width: '24rem' }"
+        [style]="{ width: '32rem' }"
       >
-        <form class="flex flex-col gap-3" (ngSubmit)="create()">
-          <input pInputText name="name" placeholder="Nom du groupe" required [(ngModel)]="name" />
-          <textarea
-            pTextarea
-            name="description"
-            placeholder="Description (optionnelle)"
-            rows="3"
-            [(ngModel)]="description"
-          ></textarea>
-          <p-button type="submit" label="Créer" [loading]="creating()" />
-        </form>
+        @if (step() === 1) {
+          <form class="flex flex-col gap-3" (ngSubmit)="next()">
+            <input pInputText name="name" placeholder="Nom du groupe" required [(ngModel)]="name" />
+            <textarea
+              pTextarea
+              name="description"
+              placeholder="Description (optionnelle)"
+              rows="3"
+              [(ngModel)]="description"
+            ></textarea>
+
+            <fieldset class="flex flex-col gap-2">
+              <legend class="text-sm sc-muted mb-1">Type de challenge (définitif)</legend>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="mode" value="custom" [(ngModel)]="mode" />
+                Matchs personnalisés (saisie manuelle)
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="mode" value="competition" [(ngModel)]="mode" />
+                Compétition officielle (scores automatiques)
+              </label>
+            </fieldset>
+
+            <p-button
+              type="submit"
+              [label]="mode === 'competition' ? 'Suivant' : 'Créer'"
+              [loading]="creating()"
+              data-testid="group-create-next"
+            />
+          </form>
+        } @else {
+          <div class="flex flex-col gap-3">
+            @if (footballStore.error()) {
+              <p-message severity="warn" [text]="footballStore.error()!" />
+            }
+            <p-select
+              [options]="footballStore.competitions()"
+              optionLabel="name"
+              placeholder="Choisir une compétition"
+              [filter]="true"
+              [ngModel]="selectedCompetition()"
+              (ngModelChange)="onCompetitionChange($event)"
+              name="competition"
+              data-testid="competition-select"
+            >
+              <ng-template #item let-competition>
+                <span class="flex items-center gap-2">
+                  <img [src]="competition.logo" alt="" class="h-4 w-4" />
+                  {{ competition.name }}
+                  <span class="text-xs sc-muted">{{ competition.country }}</span>
+                </span>
+              </ng-template>
+            </p-select>
+
+            @if (footballStore.loading()) {
+              <div class="sc-skeleton h-24"></div>
+            } @else if (selectedCompetition()) {
+              <sc-fixture-picker
+                [fixtures]="footballStore.fixtures()"
+                [(selected)]="selectedFixtureIds"
+              />
+            }
+
+            <div class="flex gap-2">
+              <p-button
+                label="Retour"
+                severity="secondary"
+                [text]="true"
+                (onClick)="step.set(1)"
+              />
+              <p-button
+                label="Créer le groupe"
+                class="flex-1"
+                [disabled]="!selectedCompetition() || selectedFixtureIds().size === 0"
+                [loading]="creating()"
+                (onClick)="create()"
+                data-testid="group-create-submit"
+              />
+            </div>
+          </div>
+        }
       </p-dialog>
     </div>
   `,
@@ -75,38 +165,86 @@ import { GroupsStore } from '../../store/groups.store';
 export class DashboardComponent implements OnInit {
   readonly store = inject(GroupsStore);
   readonly authStore = inject(AuthStore);
+  readonly footballStore = inject(FootballStore);
+  private readonly api = inject(ApiService);
   private readonly router = inject(Router);
 
   readonly showCreate = signal(false);
   readonly creating = signal(false);
+  readonly step = signal<1 | 2>(1);
+  readonly selectedCompetition = signal<Competition | null>(null);
+  readonly selectedFixtureIds = signal(new Set<string>());
   name = '';
   description = '';
+  mode: 'custom' | 'competition' = 'custom';
 
   get showCreateValue(): boolean {
     return this.showCreate();
   }
   set showCreateValue(value: boolean) {
     this.showCreate.set(value);
+    if (!value) {
+      this.resetWizard();
+    }
   }
 
   ngOnInit(): void {
     void this.store.load();
   }
 
-  async create(): Promise<void> {
+  next(): void {
     if (!this.name.trim()) {
       return;
     }
+    if (this.mode === 'custom') {
+      void this.create();
+      return;
+    }
+    this.step.set(2);
+    void this.footballStore.loadCompetitions();
+  }
+
+  onCompetitionChange(competition: Competition | null): void {
+    this.selectedCompetition.set(competition);
+    this.selectedFixtureIds.set(new Set());
+    if (competition) {
+      void this.footballStore.loadFixtures(competition.leagueId, competition.season);
+    }
+  }
+
+  async create(): Promise<void> {
     this.creating.set(true);
     try {
+      const competition = this.selectedCompetition();
       const group = await this.store.create({
         name: this.name.trim(),
         description: this.description.trim() || undefined,
+        competition:
+          this.mode === 'competition' && competition
+            ? {
+                leagueId: competition.leagueId,
+                season: competition.season,
+                name: competition.name,
+              }
+            : undefined,
       });
+      if (this.mode === 'competition') {
+        await firstValueFrom(
+          this.api.importMatches(group.id, [...this.selectedFixtureIds()]),
+        );
+      }
       void this.router.navigate(['/groups', group.id]);
     } finally {
       this.creating.set(false);
     }
+  }
+
+  private resetWizard(): void {
+    this.step.set(1);
+    this.mode = 'custom';
+    this.selectedCompetition.set(null);
+    this.selectedFixtureIds.set(new Set());
+    this.footballStore.resetFixtures();
   }
 
   logout(): void {
