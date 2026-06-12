@@ -51,14 +51,17 @@ export class MatchesService {
   }
 
   async setResult(groupId: string, matchId: string, dto: SetResultDto) {
-    await this.findInGroup(groupId, matchId);
-    const group = await this.prisma.group.findUniqueOrThrow({
-      where: { id: groupId },
+    const existing = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: { group: true },
     });
+    if (!existing || existing.groupId !== groupId) {
+      throw new NotFoundException('Match introuvable');
+    }
     const config = {
-      exactScore: group.scoringExactScore,
-      correctOutcome: group.scoringCorrectOutcome,
-      oneTeamScore: group.scoringOneTeamScore,
+      exactScore: existing.group.scoringExactScore,
+      correctOutcome: existing.group.scoringCorrectOutcome,
+      oneTeamScore: existing.group.scoringOneTeamScore,
     };
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -96,7 +99,7 @@ export class MatchesService {
   private assertDeadlineBeforeKickoff(deadline: string, kickoff: string): void {
     if (new Date(deadline) > new Date(kickoff)) {
       throw new BadRequestException(
-        "La date limite de pronostic doit précéder le coup d'envoi",
+        'La date limite de pronostic doit précéder le coup d’envoi',
       );
     }
   }

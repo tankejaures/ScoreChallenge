@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Participant, Prediction } from '@prisma/client';
+import { Participant, Prediction, Prisma } from '@prisma/client';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto';
@@ -32,35 +32,40 @@ export class PredictionsService {
 
     const participant = await this.resolveParticipant(user, match.groupId);
 
-    const existing = await this.prisma.prediction.findUnique({
-      where: {
-        matchId_participantId: { matchId, participantId: participant.id },
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.prediction.findUnique({
+          where: {
+            matchId_participantId: { matchId, participantId: participant.id },
+          },
+        });
+        if (!existing) {
+          return tx.prediction.create({
+            data: {
+              matchId,
+              participantId: participant.id,
+              scoreA: dto.scoreA,
+              scoreB: dto.scoreB,
+            },
+          });
+        }
+        if (existing.editCount >= 1) {
+          throw new ForbiddenException(
+            'Pronostic verrouillé : une seule modification autorisée',
+          );
+        }
+        return tx.prediction.update({
+          where: { id: existing.id },
+          data: {
+            scoreA: dto.scoreA,
+            scoreB: dto.scoreB,
+            editCount: 1,
+            lockedAt: new Date(),
+          },
+        });
       },
-    });
-    if (!existing) {
-      return this.prisma.prediction.create({
-        data: {
-          matchId,
-          participantId: participant.id,
-          scoreA: dto.scoreA,
-          scoreB: dto.scoreB,
-        },
-      });
-    }
-    if (existing.editCount >= 1) {
-      throw new ForbiddenException(
-        'Pronostic verrouillé : une seule modification autorisée',
-      );
-    }
-    return this.prisma.prediction.update({
-      where: { id: existing.id },
-      data: {
-        scoreA: dto.scoreA,
-        scoreB: dto.scoreB,
-        editCount: 1,
-        lockedAt: new Date(),
-      },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async resolveParticipant(
@@ -70,7 +75,7 @@ export class PredictionsService {
     if (user.role === 'participant') {
       if (user.groupId !== groupId) {
         throw new ForbiddenException(
-          "Ce match n'appartient pas à votre groupe",
+          'Ce match n’appartient pas à votre groupe',
         );
       }
       const participant = await this.prisma.participant.findUnique({
@@ -85,7 +90,7 @@ export class PredictionsService {
       where: { groupId, userId: user.sub },
     });
     if (!participant) {
-      throw new ForbiddenException("Vous n'êtes pas participant de ce groupe");
+      throw new ForbiddenException('Vous n’êtes pas participant de ce groupe');
     }
     return participant;
   }
