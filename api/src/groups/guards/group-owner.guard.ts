@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RequestWithUser } from '../../auth/jwt-auth.guard';
+import type { RequestWithUser } from '../../auth/jwt-auth.guard';
 
 @Injectable()
 export class GroupOwnerGuard implements CanActivate {

@@ -139,6 +139,44 @@ describe('Stats (e2e)', () => {
     expect(body.rank).toBe(1);
   });
 
+  it('lets a joined participant read the ranking, but not from another group', async () => {
+    // Sophie rejoint le groupe via le parcours réel (invitation + code)
+    const group = await prisma.group.findUniqueOrThrow({
+      where: { id: groupId },
+    });
+    const sophie = await request(app.getHttpServer())
+      .post(`/groups/${groupId}/participants`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Sophie' })
+      .expect(201);
+    const joined = await request(app.getHttpServer())
+      .post('/groups/join')
+      .send({
+        inviteToken: group.inviteToken,
+        code: (sophie.body as { code: string }).code,
+      })
+      .expect(201);
+    const participantToken = (joined.body as { token: string }).token;
+
+    const res = await request(app.getHttpServer())
+      .get(`/groups/${groupId}/ranking`)
+      .set('Authorization', `Bearer ${participantToken}`)
+      .expect(200);
+    expect((res.body as Array<{ name: string }>)[0].name).toBe('Marc');
+
+    // Un JWT participant d’un autre groupe est rejeté
+    const otherOwner = await registerOwner(app, 'other@test.io');
+    const otherGroup = await request(app.getHttpServer())
+      .post('/groups')
+      .set('Authorization', `Bearer ${otherOwner}`)
+      .send({ name: 'Autre groupe' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get(`/groups/${(otherGroup.body as { id: string }).id}/ranking`)
+      .set('Authorization', `Bearer ${participantToken}`)
+      .expect(403);
+  });
+
   it('returns group stats', async () => {
     const res = await request(app.getHttpServer())
       .get(`/groups/${groupId}/stats`)

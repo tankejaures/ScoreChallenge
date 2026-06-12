@@ -8,6 +8,7 @@ interface RankingRow {
   matchesPlayed: number;
   correctPredictions: number;
   exactScores: number;
+  // bons vainqueurs hors scores exacts (points = scoringCorrectOutcome)
   correctOutcomes: number;
 }
 

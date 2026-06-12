@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Match } from '@prisma/client';
-import { JwtPayload } from '../auth/jwt-payload.interface';
+import type { JwtPayload } from '../auth/jwt-payload.interface';
 import { PredictionsService } from '../predictions/predictions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoringService } from '../predictions/scoring.service';

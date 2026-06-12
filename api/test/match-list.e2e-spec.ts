@@ -80,6 +80,7 @@ describe('Match list with prediction visibility (e2e)', () => {
       }>
     )[0];
     expect(match.myPrediction.scoreA).toBe(2);
+    expect(match.predictions).toHaveLength(0);
     expect(match.predictions).toEqual([]);
   });
 
