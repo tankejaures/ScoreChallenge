@@ -39,8 +39,9 @@ model Group {
   scoringCorrectOutcome Int           @default(3)
   scoringOneTeamScore   Int           @default(1)
   competitionLeagueId   Int?
-  competitionSeason     Int?
+  competitionSeason     String?
   competitionName       String?
+  sport                 Sport         @default(FOOTBALL)
   createdAt             DateTime      @default(now())
   participants          Participant[]
   matches               Match[]
@@ -96,6 +97,18 @@ model Prediction {
   @@unique([matchId, participantId])
 }
 
+enum Sport {
+  FOOTBALL
+  AFL
+  BASEBALL
+  BASKETBALL
+  HANDBALL
+  HOCKEY
+  NFL
+  RUGBY
+  VOLLEYBALL
+}
+
 enum FixtureStatus {
   SCHEDULED
   LIVE
@@ -106,9 +119,10 @@ enum FixtureStatus {
 
 model Fixture {
   id         String        @id @default(cuid())
-  externalId Int           @unique
+  externalId Int
+  sport      Sport         @default(FOOTBALL)
   leagueId   Int
-  season     Int
+  season     String
   round      String?
   teamA      String
   teamB      String
@@ -122,5 +136,6 @@ model Fixture {
   updatedAt  DateTime      @updatedAt
   matches    Match[]
 
+  @@unique([sport, externalId])
   @@index([leagueId, season])
 }
