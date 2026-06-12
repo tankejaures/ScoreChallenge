@@ -32,7 +32,7 @@ export const AdminStore = signalStore(
         patchState(store, { saving: true, error: null });
         try {
           await firstValueFrom(api.addParticipant(groupId, name));
-          await reload(groupId);
+          await Promise.all([reload(groupId), groupStore.loadSummary(groupId)]);
           patchState(store, { saving: false });
         } catch (error) {
           const status = (error as HttpErrorResponse).status;
@@ -48,7 +48,7 @@ export const AdminStore = signalStore(
       },
       async removeParticipant(groupId: string, participantId: string): Promise<void> {
         await firstValueFrom(api.removeParticipant(groupId, participantId));
-        await reload(groupId);
+        await Promise.all([reload(groupId), groupStore.loadSummary(groupId)]);
       },
       async createMatch(groupId: string, payload: CreateMatchPayload): Promise<void> {
         patchState(store, { saving: true, error: null });

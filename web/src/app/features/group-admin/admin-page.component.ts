@@ -1,6 +1,6 @@
 import { Component, OnInit, effect, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { TabsModule } from 'primeng/tabs';
 import { ToastModule } from 'primeng/toast';
 import { AdminStore } from '../../store/admin.store';
@@ -18,7 +18,7 @@ import { ScoringPanelComponent } from './scoring-panel.component';
     ParticipantsPanelComponent,
     ScoringPanelComponent,
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   template: `
     <p-toast position="top-center" />
     <div class="max-w-2xl mx-auto p-4">

@@ -2,7 +2,6 @@ import { Component, OnInit, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
@@ -18,7 +17,6 @@ import { GroupStore } from '../../store/group.store';
     FormsModule,
     DatePipe,
     ButtonModule,
-    DatePickerModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
@@ -52,22 +50,24 @@ import { GroupStore } from '../../store/group.store';
             data-testid="match-team-b"
           />
         </div>
-        <label class="text-sm opacity-70">Coup d’envoi</label>
-        <p-datepicker
+        <label class="text-sm opacity-70" for="kickoff">Coup d’envoi</label>
+        <input
+          pInputText
+          type="datetime-local"
+          id="kickoff"
           name="kickoff"
+          required
           [(ngModel)]="kickoffAt"
-          [showTime]="true"
-          dateFormat="dd/mm/yy"
-          appendTo="body"
           data-testid="match-kickoff"
         />
-        <label class="text-sm opacity-70">Date limite de pronostic</label>
-        <p-datepicker
+        <label class="text-sm opacity-70" for="deadline">Date limite de pronostic</label>
+        <input
+          pInputText
+          type="datetime-local"
+          id="deadline"
           name="deadline"
+          required
           [(ngModel)]="predictionDeadline"
-          [showTime]="true"
-          dateFormat="dd/mm/yy"
-          appendTo="body"
           data-testid="match-deadline"
         />
         <p-button
@@ -133,8 +133,8 @@ export class MatchesPanelComponent implements OnInit {
 
   teamA = '';
   teamB = '';
-  kickoffAt: Date | null = null;
-  predictionDeadline: Date | null = null;
+  kickoffAt = '';
+  predictionDeadline = '';
   readonly resultDrafts: Record<string, { scoreA: number; scoreB: number }> = {};
 
   readonly creating = signal(false);
@@ -168,13 +168,13 @@ export class MatchesPanelComponent implements OnInit {
       await this.store.createMatch(this.groupId(), {
         teamA: this.teamA.trim(),
         teamB: this.teamB.trim(),
-        kickoffAt: this.kickoffAt.toISOString(),
-        predictionDeadline: this.predictionDeadline.toISOString(),
+        kickoffAt: new Date(this.kickoffAt).toISOString(),
+        predictionDeadline: new Date(this.predictionDeadline).toISOString(),
       });
       this.teamA = '';
       this.teamB = '';
-      this.kickoffAt = null;
-      this.predictionDeadline = null;
+      this.kickoffAt = '';
+      this.predictionDeadline = '';
       this.syncDrafts();
       this.messages.add({ severity: 'success', summary: 'Match créé', life: 2000 });
     } catch {
