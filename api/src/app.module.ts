@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { GroupsModule } from './groups/groups.module';
 import { MailModule } from './mail/mail.module';
 import { MatchesModule } from './matches/matches.module';
+import { PredictionsModule } from './predictions/predictions.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     GroupsModule,
     MatchesModule,
+    PredictionsModule,
   ],
 })
 export class AppModule {}
