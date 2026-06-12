@@ -27,6 +27,9 @@ export interface Group {
   scoringExactScore: number;
   scoringCorrectOutcome: number;
   scoringOneTeamScore: number;
+  competitionLeagueId: number | null;
+  competitionSeason: number | null;
+  competitionName: string | null;
   createdAt: string;
   participants?: Participant[];
 }
@@ -38,8 +41,49 @@ export interface GroupSummary {
   scoringExactScore: number;
   scoringCorrectOutcome: number;
   scoringOneTeamScore: number;
+  competitionLeagueId: number | null;
+  competitionSeason: number | null;
+  competitionName: string | null;
   participantCount: number;
   isOwner: boolean;
+}
+
+export type FixtureStatus = 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'POSTPONED' | 'CANCELLED';
+
+export interface Competition {
+  leagueId: number;
+  name: string;
+  type: string;
+  logo: string;
+  country: string;
+  season: number;
+}
+
+export interface FixtureView {
+  id: string;
+  externalId: number;
+  leagueId: number;
+  season: number;
+  round: string | null;
+  teamA: string;
+  teamB: string;
+  teamALogo: string | null;
+  teamBLogo: string | null;
+  kickoffAt: string;
+  status: FixtureStatus;
+  minute: number | null;
+  scoreA: number | null;
+  scoreB: number | null;
+}
+
+export interface MatchFixtureInfo {
+  status: FixtureStatus;
+  minute: number | null;
+  scoreA: number | null;
+  scoreB: number | null;
+  teamALogo: string | null;
+  teamBLogo: string | null;
+  round: string | null;
 }
 
 export type MatchStatus = 'UPCOMING' | 'LIVE' | 'FINISHED';
@@ -63,6 +107,8 @@ export interface MatchView {
   teamB: string;
   kickoffAt: string;
   predictionDeadline: string;
+  fixtureId: string | null;
+  fixture: MatchFixtureInfo | null;
   finalScoreA: number | null;
   finalScoreB: number | null;
   status: MatchStatus;

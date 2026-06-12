@@ -12,6 +12,8 @@ const match = (id: string, partial: Partial<MatchView> = {}): MatchView => ({
   teamB: 'Brésil',
   kickoffAt: '2030-06-15T16:00:00.000Z',
   predictionDeadline: '2030-06-15T15:00:00.000Z',
+  fixtureId: null,
+  fixture: null,
   finalScoreA: null,
   finalScoreB: null,
   status: 'UPCOMING',

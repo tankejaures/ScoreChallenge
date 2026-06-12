@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AuthResult,
+  Competition,
+  FixtureView,
   Group,
   GroupStats,
   GroupSummary,
@@ -22,6 +24,7 @@ export interface CreateGroupPayload {
   scoringExactScore?: number;
   scoringCorrectOutcome?: number;
   scoringOneTeamScore?: number;
+  competition?: { leagueId: number; season: number; name: string };
 }
 
 export interface CreateMatchPayload {
@@ -104,6 +107,21 @@ export class ApiService {
   }
   listMatches(groupId: string): Observable<MatchView[]> {
     return this.http.get<MatchView[]>(`${BASE}/groups/${groupId}/matches`);
+  }
+
+  // Football
+  footballCompetitions(): Observable<Competition[]> {
+    return this.http.get<Competition[]>(`${BASE}/football/competitions`);
+  }
+  competitionFixtures(leagueId: number, season: number): Observable<FixtureView[]> {
+    return this.http.get<FixtureView[]>(
+      `${BASE}/football/competitions/${leagueId}/fixtures?season=${season}`,
+    );
+  }
+  importMatches(groupId: string, fixtureIds: string[]): Observable<MatchView[]> {
+    return this.http.post<MatchView[]>(`${BASE}/groups/${groupId}/matches/import`, {
+      fixtureIds,
+    });
   }
 
   // Predictions
