@@ -11,7 +11,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { JoinGroupDto } from './dto/join-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { ParticipantJwtPayload } from '../auth/jwt-payload.interface';
+import type {
+  JwtPayload,
+  ParticipantJwtPayload,
+} from '../auth/jwt-payload.interface';
 
 @Injectable()
 export class GroupsService {
@@ -61,6 +64,26 @@ export class GroupsService {
 
   update(groupId: string, dto: UpdateGroupDto) {
     return this.prisma.group.update({ where: { id: groupId }, data: dto });
+  }
+
+  async getSummary(groupId: string, user: JwtPayload) {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      include: { _count: { select: { participants: true } } },
+    });
+    if (!group) {
+      throw new NotFoundException('Groupe introuvable');
+    }
+    return {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      scoringExactScore: group.scoringExactScore,
+      scoringCorrectOutcome: group.scoringCorrectOutcome,
+      scoringOneTeamScore: group.scoringOneTeamScore,
+      participantCount: group._count.participants,
+      isOwner: user.role === 'owner' && group.ownerId === user.sub,
+    };
   }
 
   async getPublicInfoByInviteToken(inviteToken: string) {

@@ -15,6 +15,7 @@ import { Public } from '../auth/public.decorator';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { JoinGroupDto } from './dto/join-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { GroupMemberGuard } from './guards/group-member.guard';
 import { GroupOwnerGuard } from './guards/group-owner.guard';
 import { GroupsService } from './groups.service';
 
@@ -46,6 +47,12 @@ export class GroupsController {
   @Get()
   findMine(@Req() req: RequestWithUser) {
     return this.groupsService.findMine((req.user as { sub: string }).sub);
+  }
+
+  @UseGuards(GroupMemberGuard)
+  @Get(':id/summary')
+  getSummary(@Param('id') id: string, @Req() req: RequestWithUser) {
+    return this.groupsService.getSummary(id, req.user!);
   }
 
   @UseGuards(GroupOwnerGuard)
