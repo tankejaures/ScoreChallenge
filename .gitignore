@@ -6,3 +6,5 @@ dist/
 .DS_Store
 coverage/
 .playwright-mcp/
+ranking-final.png
+landing-hero.png
