@@ -1,4 +1,22 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
+import { AuthService } from './auth.service';
 
-// Stub (Task 2) — remplacé par l'intercepteur JWT réel en Task 3.
-export const authInterceptor: HttpInterceptorFn = (req, next) => next(req);
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const token = auth.tokenForRequest();
+  const request = token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
+  return next(request).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401 && !req.url.includes('/auth/')) {
+        void router.navigate(['/login']);
+      }
+      return throwError(() => error);
+    }),
+  );
+};
