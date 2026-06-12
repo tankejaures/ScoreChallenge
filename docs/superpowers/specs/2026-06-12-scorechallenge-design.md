@@ -154,6 +154,16 @@ web/src/app/
 
 Un Signal Store par domaine, chargement via `ApiService`. Optimistic update sur la soumission de pronostic. Interceptor HTTP : ajoute le JWT, redirige vers login/join sur `401`.
 
+### Exigence de design : premium
+
+L'interface doit avoir un rendu **premium**, pas un habillage PrimeNG par défaut :
+
+- Direction artistique propre : palette dédiée, typographie soignée, thème PrimeNG personnalisé (design tokens), dark mode envisageable.
+- Composants clés travaillés : carte match avec compte à rebours, steppers de score tactiles, podium animé du classement, transitions fluides.
+- Micro-interactions et feedback (confirmation de pronostic, mise à jour du classement).
+- Mobile first irréprochable : zones tactiles généreuses, navigation par onglets en bas d'écran.
+- La phase d'implémentation frontend utilisera le skill `frontend-design` pour garantir ce niveau de qualité.
+
 ## Tests
 
 - **API** : unitaires sur `ScoringService` (toutes catégories + cas limites) et sur les règles de modification/verrouillage ; e2e (supertest) sur les parcours join → pronostic → résultat → classement, et la limite de 50 participants.
