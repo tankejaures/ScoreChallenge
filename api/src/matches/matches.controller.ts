@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { GroupOwnerGuard } from '../groups/guards/group-owner.guard';
 import { CreateMatchDto } from './dto/create-match.dto';
+import { SetResultDto } from './dto/set-result.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 import { MatchesService } from './matches.service';
 
@@ -29,5 +30,15 @@ export class MatchesController {
     @Body() dto: UpdateMatchDto,
   ) {
     return this.matchesService.update(groupId, matchId, dto);
+  }
+
+  @UseGuards(GroupOwnerGuard)
+  @Post(':mid/result')
+  setResult(
+    @Param('groupId') groupId: string,
+    @Param('mid') matchId: string,
+    @Body() dto: SetResultDto,
+  ) {
+    return this.matchesService.setResult(groupId, matchId, dto);
   }
 }
