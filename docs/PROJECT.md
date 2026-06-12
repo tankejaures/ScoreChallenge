@@ -33,7 +33,7 @@ Seule personne obligée d'avoir un compte (email + mot de passe). Il :
 - crée le groupe, lui donne un nom et une description ;
 - ajoute les participants (juste leur nom) et reçoit un code unique pour chacun ;
 - partage le lien d'invitation du groupe ;
-- crée les matchs et saisit les scores officiels ;
+- crée les matchs et saisit les scores officiels (groupes « matchs personnalisés »), ou lie le groupe à une compétition officielle : matchs importés depuis API-Football, scores live et points calculés automatiquement ;
 - configure le barème de points s'il veut s'écarter des valeurs par défaut ;
 - **joue aussi** : il est participant comme les autres.
 

@@ -18,6 +18,17 @@ Application de pronostics de matchs entre amis, collègues et communautés.
     make dev-api       # API sur http://localhost:3000
     make dev-web       # Frontend sur http://localhost:4200 (proxy /api → API)
 
+## Compétitions officielles (API-Football)
+
+Les groupes peuvent être liés à une compétition en cours (Coupe du Monde, Ligue 1…) :
+matchs importés depuis [API-Football](https://www.api-football.com/), scores live et
+points calculés automatiquement.
+
+1. Créer une clé sur https://dashboard.api-sports.io (plan gratuit : 100 req/jour,
+   limité aux saisons 2021-2023 ; plan payant requis pour les compétitions courantes).
+2. La renseigner dans `api/.env` : `FOOTBALL_API_KEY=...`
+3. Sans clé, les groupes « matchs personnalisés » fonctionnent normalement.
+
 ## Parcours de démo
 
 1. Créer un compte organisateur sur `http://localhost:4200/register`.
